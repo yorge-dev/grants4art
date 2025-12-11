@@ -156,7 +156,7 @@ export default function Home() {
               Version 0.0.1
             </a>
           </div>
-          <div style={{ flexShrink: 0 }}>
+          <div className="w-full md:w-auto md:flex-shrink-0">
             <ThemeToggle />
           </div>
         </div>
@@ -177,15 +177,10 @@ export default function Home() {
         </div>
 
         {/* Sidebar Layout: Filters on left, Grants on right */}
-        <div style={{ display: 'flex', gap: '24px', alignItems: 'flex-start' }}>
+        <div className="flex flex-col md:flex-row gap-6 md:items-start">
           {/* Sidebar Filters */}
-          <aside style={{ flexShrink: 0 }}>
-            <div style={{ 
-              position: 'sticky', 
-              top: '20px',
-              display: 'flex',
-              flexDirection: 'column'
-            }}>
+          <aside className="w-full md:w-auto md:flex-shrink-0">
+            <div className="md:sticky md:top-5 flex flex-col">
               <GrantFilters 
                 onFilterChange={handleFilterChange}
                 loading={loading}
@@ -199,7 +194,7 @@ export default function Home() {
           </aside>
 
           {/* Grants List */}
-          <div style={{ flex: 1, minWidth: 0 }}>
+          <div className="flex-1 min-w-0 w-full">
             {/* Grants Grid */}
             {loading ? (
               <div className="text-center aol-box-inset" style={{ padding: '32px', margin: '0 8px 24px 8px' }}>
@@ -274,3 +269,4 @@ export default function Home() {
     </div>
   );
 }
+
