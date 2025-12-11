@@ -1,0 +1,115 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Grant {
+  id            String   @id @default(cuid())
+  title         String
+  organization  String
+  amount        String?
+  amountMin     Int?
+  amountMax     Int?
+  deadline      DateTime?
+  location      String
+  eligibility   String   @db.Text
+  description   String   @db.Text
+  applicationUrl String?
+  category      String?  // government, corporate, private, public
+  discoveredAt  DateTime @default(now())
+  approvedAt    DateTime?
+  approvedBy    String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  tags          GrantTagRelation[]
+  scrapeJob     ScrapeJob? @relation(fields: [scrapeJobId], references: [id])
+  scrapeJobId   String?
+  
+  @@index([deadline])
+  @@index([location])
+  @@index([category])
+}
+
+model GrantTag {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  
+  grants    GrantTagRelation[]
+}
+
+model GrantTagRelation {
+  grant     Grant    @relation(fields: [grantId], references: [id], onDelete: Cascade)
+  grantId   String
+  tag       GrantTag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  tagId     String
+  
+  @@id([grantId, tagId])
+  @@index([grantId])
+  @@index([tagId])
+}
+
+model AdminUser {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String?
+  role      AdminRole @default(ADMIN)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model GrantSource {
+  id          String   @id @default(cuid())
+  name        String
+  url         String   @unique
+  isActive    Boolean  @default(true)
+  lastScraped DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  scrapeJobs  ScrapeJob[]
+}
+
+model ScrapeJob {
+  id              String   @id @default(cuid())
+  sourceUrl       String
+  status          ScrapeJobStatus @default(PENDING)
+  discoveredCount Int      @default(0)
+  errorMessage    String?  @db.Text
+  createdAt       DateTime @default(now())
+  completedAt     DateTime?
+  
+  grantSource     GrantSource? @relation(fields: [grantSourceId], references: [id])
+  grantSourceId   String?
+
+  grants          Grant[]
+  
+  @@index([status])
+  @@index([createdAt])
+  @@index([grantSourceId])
+}
+
+enum AdminRole {
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum ScrapeJobStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}

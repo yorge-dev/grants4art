@@ -1,0 +1,501 @@
+@import "tailwindcss";
+
+:root {
+  /* Misty Forest Palette + Blue */
+  --color-slate-gray: #77878B;
+  --color-dark-teal: #305252;
+  --color-charcoal: #373E40;
+  --color-medium-teal: #488286;
+  --color-pale-mint: #B7D5D4;
+  --color-blue: #788bff;
+  
+  /* Brown/Earth Tone Palette */
+  --color-dark-walnut: #582f0e;
+  --color-dark-walnut-100: #120903;
+  --color-dark-walnut-200: #231306;
+  --color-dark-walnut-300: #351c08;
+  --color-dark-walnut-400: #47260b;
+  --color-dark-walnut-500: #582f0e;
+  --color-dark-walnut-600: #9f5519;
+  --color-dark-walnut-700: #de7c2b;
+  --color-dark-walnut-800: #e9a772;
+  --color-dark-walnut-900: #f4d3b8;
+  
+  --color-saddle-brown: #7f4f24;
+  --color-saddle-brown-100: #191007;
+  --color-saddle-brown-200: #331f0e;
+  --color-saddle-brown-300: #4c2f16;
+  --color-saddle-brown-400: #663f1d;
+  --color-saddle-brown-500: #7f4f24;
+  --color-saddle-brown-600: #b57033;
+  --color-saddle-brown-700: #d1935d;
+  --color-saddle-brown-800: #e0b793;
+  --color-saddle-brown-900: #f0dbc9;
+  
+  --color-toffee-brown: #936639;
+  --color-toffee-brown-100: #1d140b;
+  --color-toffee-brown-200: #3b2917;
+  --color-toffee-brown-300: #583d22;
+  --color-toffee-brown-400: #76522e;
+  --color-toffee-brown-500: #936639;
+  --color-toffee-brown-600: #ba854f;
+  --color-toffee-brown-700: #cca37b;
+  --color-toffee-brown-800: #ddc2a7;
+  --color-toffee-brown-900: #eee0d3;
+  
+  --color-camel: #a68a64;
+  --color-camel-100: #221c13;
+  --color-camel-200: #433727;
+  --color-camel-300: #65533a;
+  --color-camel-400: #876f4d;
+  --color-camel-500: #a68a64;
+  --color-camel-600: #b8a183;
+  --color-camel-700: #c9b9a2;
+  --color-camel-800: #dbd0c1;
+  --color-camel-900: #ede8e0;
+  
+  --color-khaki-beige: #b6ad90;
+  --color-khaki-beige-100: #27241a;
+  --color-khaki-beige-200: #4f4934;
+  --color-khaki-beige-300: #766d4d;
+  --color-khaki-beige-400: #9d9068;
+  --color-khaki-beige-500: #b6ad90;
+  --color-khaki-beige-600: #c5bea6;
+  --color-khaki-beige-700: #d3cebc;
+  --color-khaki-beige-800: #e2ded3;
+  --color-khaki-beige-900: #f0efe9;
+  
+  --color-dry-sage: #c2c5aa;
+  --color-dry-sage-100: #2a2c1e;
+  --color-dry-sage-200: #54573b;
+  --color-dry-sage-300: #7e8359;
+  --color-dry-sage-400: #a3a77e;
+  --color-dry-sage-500: #c2c5aa;
+  --color-dry-sage-600: #ced1bb;
+  --color-dry-sage-700: #dadccc;
+  --color-dry-sage-800: #e7e8dd;
+  --color-dry-sage-900: #f3f3ee;
+  
+  --color-dry-sage-alt: #a4ac86;
+  --color-dry-sage-alt-100: #222419;
+  --color-dry-sage-alt-200: #444932;
+  --color-dry-sage-alt-300: #666d4a;
+  --color-dry-sage-alt-400: #889263;
+  --color-dry-sage-alt-500: #a4ac86;
+  --color-dry-sage-alt-600: #b6bd9e;
+  --color-dry-sage-alt-700: #c8cdb6;
+  --color-dry-sage-alt-800: #dbdece;
+  --color-dry-sage-alt-900: #edeee7;
+  
+  --color-dusty-olive: #656d4a;
+  --color-dusty-olive-100: #14160f;
+  --color-dusty-olive-200: #282c1e;
+  --color-dusty-olive-300: #3d422d;
+  --color-dusty-olive-400: #51573b;
+  --color-dusty-olive-500: #656d4a;
+  --color-dusty-olive-600: #899465;
+  --color-dusty-olive-700: #a7b08a;
+  --color-dusty-olive-800: #c4cab1;
+  --color-dusty-olive-900: #e2e5d8;
+  
+  --color-ebony: #414833;
+  --color-ebony-100: #0d0e0a;
+  --color-ebony-200: #1a1d14;
+  --color-ebony-300: #272b1e;
+  --color-ebony-400: #343929;
+  --color-ebony-500: #414833;
+  --color-ebony-600: #6a7553;
+  --color-ebony-700: #919e77;
+  --color-ebony-800: #b6bfa4;
+  --color-ebony-900: #dadfd2;
+  
+  --color-charcoal-brown: #333d29;
+  --color-charcoal-brown-100: #0a0c08;
+  --color-charcoal-brown-200: #141810;
+  --color-charcoal-brown-300: #1f2518;
+  --color-charcoal-brown-400: #293121;
+  --color-charcoal-brown-500: #333d29;
+  --color-charcoal-brown-600: #5c6e49;
+  --color-charcoal-brown-700: #859d6c;
+  --color-charcoal-brown-800: #adbe9d;
+  --color-charcoal-brown-900: #d6dece;
+  
+  /* Light mode colors */
+  --background: var(--color-khaki-beige-900);
+  --foreground: var(--color-charcoal-brown-500);
+  --border-color: var(--color-camel-600);
+  --primary: var(--color-saddle-brown-500);
+  --secondary: var(--color-toffee-brown-500);
+  --accent: var(--color-saddle-brown-600);
+  --muted: var(--color-toffee-brown-600);
+  --card-bg: var(--color-khaki-beige-900);
+  --inset-bg: var(--color-khaki-beige-800);
+  --text-field-bg: var(--color-khaki-beige-800);
+  --amount-card-bg-start: var(--color-camel-800);
+  --amount-card-bg-end: var(--color-camel-700);
+}
+
+[data-theme='grey'] {
+  /* Grey theme - no colors, only greys */
+  --background: #f5f5f5;
+  --foreground: #333333;
+  --border-color: #999999;
+  --primary: #666666;
+  --secondary: #888888;
+  --accent: #777777;
+  --muted: #999999;
+  --card-bg: #ffffff;
+  --inset-bg: #e8e8e8;
+  --text-field-bg: #f0f0f0;
+  --amount-card-bg-start: #e8e8e8;
+  --amount-card-bg-end: #e0e0e0;
+}
+
+[data-theme='grey-inverted'] {
+  /* Inverted grey theme - inverted colors from grey */
+  --background: #0a0a0a;
+  --foreground: #cccccc;
+  --border-color: #666666;
+  --primary: #999999;
+  --secondary: #777777;
+  --accent: #888888;
+  --muted: #666666;
+  --card-bg: #1a1a1a;
+  --inset-bg: #171717;
+  --text-field-bg: #0f0f0f;
+  --amount-card-bg-start: #171717;
+  --amount-card-bg-end: #1f1f1f;
+}
+
+[data-theme='dark'] {
+  /* Dark mode colors */
+  --background: var(--color-charcoal-brown-100);
+  --foreground: var(--color-khaki-beige-600);
+  --border-color: var(--color-dusty-olive-600);
+  --primary: var(--color-saddle-brown-600);
+  --secondary: var(--color-toffee-brown-600);
+  --accent: var(--color-saddle-brown-700);
+  --muted: var(--color-toffee-brown-700);
+  --card-bg: var(--color-charcoal-brown-200);
+  --inset-bg: var(--color-charcoal-brown-300);
+  --text-field-bg: var(--color-charcoal-brown-300);
+  --amount-card-bg-start: var(--color-charcoal-brown-300);
+  --amount-card-bg-end: var(--color-charcoal-brown-200);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+}
+
+html {
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+  background: var(--background);
+  transition: background-color 0.3s ease;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  transition: background-color 0.3s ease, color 0.3s ease;
+  min-height: 100vh;
+  position: relative;
+}
+
+body::before {
+  display: none;
+}
+
+[data-theme='grey'] body::before {
+  display: none;
+}
+
+[data-theme='grey-inverted'] body::before {
+  display: none;
+}
+
+[data-theme='dark'] body::before {
+  display: none;
+}
+
+body > * {
+  position: relative;
+  z-index: 1;
+}
+
+::selection {
+  background-color: var(--color-saddle-brown-500);
+  color: white;
+}
+
+::-moz-selection {
+  background-color: var(--color-saddle-brown-500);
+  color: white;
+}
+
+[data-theme='grey'] ::selection {
+  background-color: var(--color-saddle-brown-400);
+  color: white;
+}
+
+[data-theme='grey'] ::-moz-selection {
+  background-color: var(--color-saddle-brown-400);
+  color: white;
+}
+
+[data-theme='grey-inverted'] ::selection {
+  background-color: #666666;
+  color: white;
+}
+
+[data-theme='grey-inverted'] ::-moz-selection {
+  background-color: #666666;
+  color: white;
+}
+
+/* Button Styles */
+.aol-button {
+  background: linear-gradient(to bottom, var(--color-saddle-brown-600), var(--color-saddle-brown-700));
+  border: 3px outset var(--primary);
+  border-radius: 8px;
+  color: white;
+  font-weight: bold;
+  font-size: 13px;
+  padding: 4px 12px;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+  box-shadow: 
+    inset 1px 1px 0 rgba(255, 255, 255, 0.5),
+    inset -1px -1px 0 rgba(0, 0, 0, 0.3);
+}
+
+[data-theme='grey'] .aol-button {
+  background: linear-gradient(to bottom, #888888, #666666);
+  border: 3px outset var(--primary);
+  color: white;
+}
+
+[data-theme='grey-inverted'] .aol-button {
+  background: linear-gradient(to bottom, #777777, #555555);
+  border: 3px outset var(--primary);
+  color: white;
+}
+
+.aol-button:hover {
+  background: linear-gradient(to bottom, var(--color-saddle-brown-500), var(--color-saddle-brown-600));
+}
+
+[data-theme='grey'] .aol-button:hover {
+  background: linear-gradient(to bottom, #999999, #777777);
+}
+
+[data-theme='grey-inverted'] .aol-button:hover {
+  background: linear-gradient(to bottom, #888888, #666666);
+}
+
+.aol-button:active {
+  border: 3px inset var(--primary);
+  box-shadow: 
+    inset 1px 1px 0 rgba(0, 0, 0, 0.3),
+    inset -1px -1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.aol-button-secondary {
+  background: linear-gradient(to bottom, var(--color-toffee-brown-600), var(--color-toffee-brown-700));
+  border: 3px outset var(--secondary);
+  border-radius: 8px;
+  color: white;
+  font-weight: bold;
+  font-size: 13px;
+  padding: 4px 12px;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+  box-shadow: 
+    inset 1px 1px 0 rgba(255, 255, 255, 0.5),
+    inset -1px -1px 0 rgba(0, 0, 0, 0.3);
+}
+
+[data-theme='grey'] .aol-button-secondary {
+  background: linear-gradient(to bottom, #999999, #777777);
+  border: 3px outset var(--secondary);
+}
+
+[data-theme='grey-inverted'] .aol-button-secondary {
+  background: linear-gradient(to bottom, #666666, #555555);
+  border: 3px outset var(--secondary);
+}
+
+.aol-button-secondary:hover {
+  background: linear-gradient(to bottom, var(--color-toffee-brown-500), var(--color-toffee-brown-600));
+}
+
+[data-theme='grey'] .aol-button-secondary:hover {
+  background: linear-gradient(to bottom, #aaaaaa, #888888);
+}
+
+[data-theme='grey-inverted'] .aol-button-secondary:hover {
+  background: linear-gradient(to bottom, #777777, #666666);
+}
+
+.aol-button-secondary:active {
+  border: 3px inset var(--secondary);
+  box-shadow: 
+    inset 1px 1px 0 rgba(0, 0, 0, 0.3),
+    inset -1px -1px 0 rgba(255, 255, 255, 0.5);
+}
+
+/* Card/Box Styles */
+.aol-box {
+  background: var(--card-bg);
+  border: 4px outset var(--primary);
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 
+    2px 2px 4px rgba(55, 62, 64, 0.15),
+    inset 1px 1px 0 rgba(255, 255, 255, 0.8);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+[data-theme='grey'] .aol-box {
+  border: 4px outset var(--primary);
+  box-shadow: 
+    2px 2px 4px rgba(0, 0, 0, 0.1),
+    inset 1px 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+[data-theme='grey-inverted'] .aol-box {
+  border: 4px outset var(--primary);
+  box-shadow: 
+    2px 2px 4px rgba(0, 0, 0, 0.5),
+    inset 1px 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+[data-theme='dark'] .aol-box {
+  box-shadow: 
+    2px 2px 4px rgba(0, 0, 0, 0.3),
+    inset 1px 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.aol-box-inset {
+  background: var(--inset-bg);
+  border: 4px inset var(--secondary);
+  border-radius: 12px;
+  padding: 12px;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+/* Input Styles */
+.aol-input {
+  background: var(--card-bg);
+  border: 2px inset var(--muted);
+  border-radius: 6px;
+  padding: 4px 6px;
+  font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
+  font-size: 13px;
+  color: var(--foreground);
+  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+}
+
+.aol-input:focus {
+  outline: 2px solid var(--color-saddle-brown-500);
+  border-color: var(--color-saddle-brown-500);
+}
+
+[data-theme='grey'] .aol-input:focus {
+  outline: 2px solid var(--muted);
+  border-color: var(--muted);
+}
+
+[data-theme='grey-inverted'] .aol-input:focus {
+  outline: 2px solid var(--muted);
+  border-color: var(--muted);
+}
+
+/* Text Styles */
+.aol-heading {
+  color: var(--primary);
+  font-weight: bold;
+  letter-spacing: 0.5px;
+  font-family: var(--font-exo), sans-serif;
+}
+
+.aol-heading-large {
+  font-size: 28px;
+  color: var(--primary);
+  font-weight: bold;
+  letter-spacing: 1px;
+  font-family: var(--font-exo), sans-serif;
+}
+
+/* Container utilities */
+.container-max {
+  max-width: 1440px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Compact spacing utilities */
+.compact-p {
+  margin: 4px 0;
+}
+
+.compact-mb {
+  margin-bottom: 6px;
+}
+
+.compact-mt {
+  margin-top: 6px;
+}
+
+.compact-px {
+  padding-left: 6px;
+  padding-right: 6px;
+}
+
+.compact-py {
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+
+/* Grant Card Hover Animation */
+.grant-card {
+  transition: padding 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
+              box-shadow 0.3s ease;
+  will-change: padding, height;
+}
+
+.grant-card:hover {
+  box-shadow: 
+    4px 4px 8px rgba(0, 0, 0, 0.3),
+    inset 1px 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.grant-description {
+  transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+
+/* Theme dropdown animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.theme-dropdown {
+  animation: fadeIn 0.15s ease;
+}
