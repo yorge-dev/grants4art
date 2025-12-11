@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 interface PatchNote {
   version: string;
   date: string;
+  comingSoon?: boolean;
   notes: string[];
 }
 
