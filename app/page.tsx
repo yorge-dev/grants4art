@@ -262,7 +262,7 @@ export default function Home() {
                     key={grant.id} 
                     grant={grant}
                     isLocked={lockedGrantId === grant.id}
-                    onLock={() => handleLockGrant(grant.id)}
+                    onLock={handleLockGrant}
                     onUnlock={handleUnlockGrant}
                   />
                 ))}

@@ -28,7 +28,7 @@ interface Grant {
 interface GrantCardProps {
   grant: Grant;
   isLocked?: boolean;
-  onLock?: () => void;
+  onLock?: (grantId: string) => void;
   onUnlock?: () => void;
 }
 
@@ -181,7 +181,7 @@ export function GrantCard({ grant, isLocked = false, onLock, onUnlock }: GrantCa
               lockTimeoutRef = setTimeout(() => {
                 // Double-check conditions after delay
                 if (onLock && !isLocked) {
-                  onLock();
+                  onLock(grant.id);
                 }
                 lockTimeoutRef = null;
               }, 300); // 300ms delay to stabilize during scroll
@@ -233,7 +233,7 @@ export function GrantCard({ grant, isLocked = false, onLock, onUnlock }: GrantCa
     if (isLocked && onUnlock) {
       onUnlock();
     } else if (!isLocked && onLock) {
-      onLock();
+      onLock(grant.id);
     }
   };
 
