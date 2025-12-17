@@ -1,0 +1,21 @@
+---
+alwaysApply: true
+---
+
+Do not use useEffect anywhere in the codebase. Instead, use more specialized, declarative alternatives:
+
+1. **Data Fetching**: Use React Server Components, Server Actions, or fetch in event handlers/callbacks rather than useEffect
+2. **Event Listeners**: Attach listeners directly in event handlers or use ref callbacks
+3. **Cleanup/Timeouts**: Handle cleanup in the same event handler that creates them, or use refs with cleanup functions
+4. **Derived State**: Use useMemo, useCallback, or computed values in render instead of syncing state in useEffect
+5. **Mount-only Logic**: Initialize values directly in render or use callbacks/event handlers
+6. **Prop/State Sync**: Use controlled components pattern or derive values directly in render
+
+For Next.js specifically:
+- Use Server Components for data fetching when possible
+- Use Server Actions for mutations
+- Use event handlers for user interactions
+- Use refs for DOM access and cleanup
+- Derive state from props/state directly rather than syncing in effects
+
+If you encounter a case where useEffect seems necessary, refactor to use one of the above patterns instead.

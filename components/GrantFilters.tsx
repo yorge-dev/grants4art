@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { useTheme } from '@/app/theme-provider';
 import { GRANT_CATEGORIES } from '@/lib/constants';
 
@@ -37,83 +37,66 @@ export function GrantFilters({ onFilterChange, loading = false, page = 1, total 
   const [selectedLocation, setSelectedLocation] = useState<string>('Austin');
 
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const filtersRef = useRef({ search, categories: selectedCategories });
   const prevFiltersRef = useRef<string>('');
   const locationSelectRef = useRef<HTMLSelectElement>(null);
 
-  // Keep refs in sync with state
-  useEffect(() => {
-    filtersRef.current = { search, categories: selectedCategories };
-  }, [search, selectedCategories]);
-
   // Helper to serialize filters for comparison
-  const serializeFilters = (f: typeof filtersRef.current) => {
+  const serializeFilters = useCallback((search: string, categories: string[]) => {
     return JSON.stringify({ 
-      search: f.search, 
-      categories: [...f.categories].sort()
+      search, 
+      categories: [...categories].sort()
     });
-  };
+  }, []);
 
-  // Debounced search effect - only triggers on search changes
-  useEffect(() => {
+  // Update filters function
+  const updateFilters = useCallback((searchValue: string, categoriesValue: string[]) => {
+    const currentSerialized = serializeFilters(searchValue, categoriesValue);
+    
+    // Only call onFilterChange if values actually changed
+    if (prevFiltersRef.current !== currentSerialized) {
+      prevFiltersRef.current = currentSerialized;
+      onFilterChange({ search: searchValue, categories: categoriesValue });
+    }
+  }, [serializeFilters, onFilterChange]);
+
+  // Store current categories in ref to avoid stale closure
+  const selectedCategoriesRef = useRef(selectedCategories);
+  selectedCategoriesRef.current = selectedCategories;
+
+  // Handle search change with debounce
+  const handleSearchChange = useCallback((value: string) => {
+    setSearch(value);
+    
     // Clear existing timeout
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current);
     }
 
-    // Set new timeout for search
+    // Set new timeout for search - read from ref to get current value
     searchTimeoutRef.current = setTimeout(() => {
-      const currentFilters = filtersRef.current;
-      const currentSerialized = serializeFilters(currentFilters);
-      
-      // Only update if filters actually changed
-      if (prevFiltersRef.current !== currentSerialized) {
-        prevFiltersRef.current = currentSerialized;
-        onFilterChange(currentFilters);
-      }
+      updateFilters(value, selectedCategoriesRef.current);
+      searchTimeoutRef.current = null;
     }, 300); // 300ms debounce delay
+  }, [updateFilters]);
 
-    // Cleanup function to clear timeout
-    return () => {
-      if (searchTimeoutRef.current) {
-        clearTimeout(searchTimeoutRef.current);
-      }
-    };
-  }, [search, onFilterChange]); // Only depend on search changes
-
-  // Update filters when other fields change (non-search)
-  useEffect(() => {
+  // Handle category change (immediate update)
+  const handleCategoryChange = useCallback((newCategories: string[]) => {
+    setSelectedCategories(newCategories);
+    
     // Clear any pending search debounce and apply immediately
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current);
       searchTimeoutRef.current = null;
     }
     
-    const currentFilters = filtersRef.current;
-    const currentSerialized = serializeFilters(currentFilters);
-    
-    // Only call onFilterChange if values actually changed
-    if (prevFiltersRef.current !== currentSerialized) {
-      prevFiltersRef.current = currentSerialized;
-      onFilterChange(currentFilters);
-    }
-  }, [selectedCategories, onFilterChange]); // Exclude search to avoid bypassing debounce
-
-  // Clear timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (searchTimeoutRef.current) {
-        clearTimeout(searchTimeoutRef.current);
-      }
-    };
-  }, []);
+    updateFilters(search, newCategories);
+  }, [search, updateFilters]);
 
   const toggleCategory = (slug: string) => {
-    setSelectedCategories(prev => 
-      prev.includes(slug) 
-        ? prev.filter(c => c !== slug)
-        : [...prev, slug]
-    );
+    const newCategories = selectedCategories.includes(slug) 
+      ? selectedCategories.filter(c => c !== slug)
+      : [...selectedCategories, slug];
+    handleCategoryChange(newCategories);
   };
 
   const handleClearFilters = () => {
@@ -124,6 +107,7 @@ export function GrantFilters({ onFilterChange, loading = false, page = 1, total 
     }
     setSearch('');
     setSelectedCategories([]);
+    prevFiltersRef.current = '';
     onFilterChange({ search: '', categories: [] });
   };
 
@@ -160,7 +144,7 @@ export function GrantFilters({ onFilterChange, loading = false, page = 1, total 
           type="text"
           id="search"
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => handleSearchChange(e.target.value)}
           placeholder="Grant title, organization..."
           className="aol-input"
           style={{ width: '100%', fontSize: '12px', padding: '6px 10px' }}

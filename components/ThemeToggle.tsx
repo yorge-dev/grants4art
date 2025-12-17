@@ -1,7 +1,7 @@
 'use client';
 
 import { useTheme } from '@/app/theme-provider';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 
 const THEMES = [
   { slug: 'grey', name: 'Grey', icon: 'invert_colors' },
@@ -37,20 +37,14 @@ export function ThemeToggle() {
 
   const handleMouseLeave = () => {
     // Add a small delay before hiding to prevent flickering
+    if (hideTimeoutRef.current) {
+      clearTimeout(hideTimeoutRef.current);
+    }
     hideTimeoutRef.current = setTimeout(() => {
       setIsHovered(false);
       hideTimeoutRef.current = null;
     }, 150);
   };
-
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (hideTimeoutRef.current) {
-        clearTimeout(hideTimeoutRef.current);
-      }
-    };
-  }, []);
 
   const handleThemeSelect = (themeSlug: 'dark' | 'grey' | 'light') => {
     if (setTheme) {

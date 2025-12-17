@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useRef } from 'react';
 
 interface PatchNote {
   version: string;
@@ -42,7 +42,17 @@ interface VersionPatchNotesProps {
 }
 
 export function VersionPatchNotes({ expanded: controlledExpanded, onExpandedChange }: VersionPatchNotesProps) {
-  const [internalExpanded, setInternalExpanded] = useState(false);
+  // Initialize internal state from controlled prop if provided
+  const [internalExpanded, setInternalExpanded] = useState(controlledExpanded ?? false);
+  const prevControlledRef = useRef(controlledExpanded);
+  
+  // Sync internal state when controlled prop changes - use setTimeout to avoid render-time updates
+  if (controlledExpanded !== undefined && prevControlledRef.current !== controlledExpanded) {
+    prevControlledRef.current = controlledExpanded;
+    setTimeout(() => {
+      setInternalExpanded(controlledExpanded);
+    }, 0);
+  }
   
   // Use controlled state if provided, otherwise use internal state
   const isExpanded = controlledExpanded !== undefined ? controlledExpanded : internalExpanded;
@@ -54,13 +64,6 @@ export function VersionPatchNotes({ expanded: controlledExpanded, onExpandedChan
       setInternalExpanded(value);
     }
   };
-
-  // Sync internal state when controlled prop changes
-  useEffect(() => {
-    if (controlledExpanded !== undefined) {
-      setInternalExpanded(controlledExpanded);
-    }
-  }, [controlledExpanded]);
 
   return (
     <div id="version-patch-notes" style={{ marginBottom: '32px' }}>

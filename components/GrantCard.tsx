@@ -1,7 +1,7 @@
 'use client';
 
 import { formatDistanceToNow } from 'date-fns';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { formatTagName } from '@/lib/tag-utils';
 
 interface Grant {
@@ -85,6 +85,9 @@ export function GrantCard({ grant, isLocked = false, onLock, onUnlock }: GrantCa
   const hideTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   const isMobileRef = useRef(false);
+  const observerRef = useRef<IntersectionObserver | null>(null);
+  const lockTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const resizeHandlerRef = useRef<(() => void) | null>(null);
 
   // Format amount display - prefer amountMin/amountMax if available, otherwise use amount string
   const formatAmount = () => {
@@ -105,7 +108,56 @@ export function GrantCard({ grant, isLocked = false, onLock, onUnlock }: GrantCa
 
   const displayAmount = formatAmount();
 
+  // Check if mobile on first interaction
+  const checkMobile = useCallback(() => {
+    if (isMobileRef.current) return; // Already checked
+    isMobileRef.current = window.matchMedia('(max-width: 768px)').matches || 
+                         'ontouchstart' in window ||
+                         navigator.maxTouchPoints > 0;
+    
+    // Set up resize listener only once
+    if (!resizeHandlerRef.current) {
+      const handler = () => {
+        isMobileRef.current = window.matchMedia('(max-width: 768px)').matches || 
+                             'ontouchstart' in window ||
+                             navigator.maxTouchPoints > 0;
+      };
+      resizeHandlerRef.current = handler;
+      window.addEventListener('resize', handler);
+    }
+  }, []);
+
+  // Cleanup resize listener on unmount using ref callback
+  const cardRefCallback = useCallback((node: HTMLDivElement | null) => {
+    // Cleanup previous observer
+    if (observerRef.current) {
+      observerRef.current.disconnect();
+      observerRef.current = null;
+    }
+    
+    // Cleanup previous timeout
+    if (lockTimeoutRef.current) {
+      clearTimeout(lockTimeoutRef.current);
+      lockTimeoutRef.current = null;
+    }
+
+    // Cleanup resize listener when component unmounts
+    if (!node && resizeHandlerRef.current) {
+      window.removeEventListener('resize', resizeHandlerRef.current);
+      resizeHandlerRef.current = null;
+    }
+
+    if (node) {
+      cardRef.current = node;
+      checkMobile();
+      if (isMobileRef.current) {
+        setupIntersectionObserver();
+      }
+    }
+  }, [checkMobile, setupIntersectionObserver]);
+
   const handleMouseEnter = () => {
+    checkMobile();
     // Don't show tooltip on hover if card is locked or on mobile
     if (isLocked || isMobileRef.current) return;
     
@@ -122,46 +174,26 @@ export function GrantCard({ grant, isLocked = false, onLock, onUnlock }: GrantCa
     if (isLocked || isMobileRef.current) return;
     
     // Add a small delay before hiding to prevent flickering when moving between cards
+    if (hideTimeoutRef.current) {
+      clearTimeout(hideTimeoutRef.current);
+    }
     hideTimeoutRef.current = setTimeout(() => {
       setShowTooltip(false);
       hideTimeoutRef.current = null;
     }, 150); // 150ms delay
   };
 
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (hideTimeoutRef.current) {
-        clearTimeout(hideTimeoutRef.current);
-      }
-    };
-  }, []);
-
-  // Detect mobile devices
-  useEffect(() => {
-    const checkMobile = () => {
-      isMobileRef.current = window.matchMedia('(max-width: 768px)').matches || 
-                           'ontouchstart' in window ||
-                           navigator.maxTouchPoints > 0;
-    };
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
-
-  // Intersection Observer for mobile viewport detection
-  useEffect(() => {
-    if (!isMobileRef.current || !cardRef.current) return;
-
-    let lockTimeoutRef: NodeJS.Timeout | null = null;
+  // Setup intersection observer using ref callback
+  const setupIntersectionObserver = useCallback(() => {
+    if (!isMobileRef.current || !cardRef.current || observerRef.current) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
           // Clear any pending lock timeout
-          if (lockTimeoutRef) {
-            clearTimeout(lockTimeoutRef);
-            lockTimeoutRef = null;
+          if (lockTimeoutRef.current) {
+            clearTimeout(lockTimeoutRef.current);
+            lockTimeoutRef.current = null;
           }
 
           // Check if card is centered in viewport
@@ -178,12 +210,12 @@ export function GrantCard({ grant, isLocked = false, onLock, onUnlock }: GrantCa
             if (distanceFromCenter < threshold && onLock && !isLocked) {
               // Add a small delay to prevent rapid locking during scroll
               // When a new card locks, the parent will automatically unlock the previous one
-              lockTimeoutRef = setTimeout(() => {
+              lockTimeoutRef.current = setTimeout(() => {
                 // Double-check conditions after delay
                 if (onLock && !isLocked) {
                   onLock(grant.id);
                 }
-                lockTimeoutRef = null;
+                lockTimeoutRef.current = null;
               }, 300); // 300ms delay to stabilize during scroll
             }
           }
@@ -198,29 +230,9 @@ export function GrantCard({ grant, isLocked = false, onLock, onUnlock }: GrantCa
     );
 
     observer.observe(cardRef.current);
+    observerRef.current = observer;
+  }, [isLocked, onLock, grant.id]);
 
-    return () => {
-      if (lockTimeoutRef) {
-        clearTimeout(lockTimeoutRef);
-      }
-      observer.disconnect();
-    };
-  }, [isLocked, onLock]);
-
-  // Update tooltip visibility based on locked state
-  useEffect(() => {
-    if (isLocked) {
-      setShowTooltip(true);
-      // Clear any pending hide timeout
-      if (hideTimeoutRef.current) {
-        clearTimeout(hideTimeoutRef.current);
-        hideTimeoutRef.current = null;
-      }
-    } else if (!isMobileRef.current) {
-      // On desktop, hide tooltip when unlocked (unless hovering)
-      // The hover handlers will manage this
-    }
-  }, [isLocked]);
 
   const handleCardClick = (e: React.MouseEvent) => {
     // Don't navigate if clicking on the application URL link
@@ -231,19 +243,31 @@ export function GrantCard({ grant, isLocked = false, onLock, onUnlock }: GrantCa
 
     // Toggle lock state instead of navigating
     if (isLocked && onUnlock) {
+      // Clear tooltip when unlocking
+      setShowTooltip(false);
+      if (hideTimeoutRef.current) {
+        clearTimeout(hideTimeoutRef.current);
+        hideTimeoutRef.current = null;
+      }
       onUnlock();
     } else if (!isLocked && onLock) {
+      // Show tooltip when locking
+      setShowTooltip(true);
+      if (hideTimeoutRef.current) {
+        clearTimeout(hideTimeoutRef.current);
+        hideTimeoutRef.current = null;
+      }
       onLock(grant.id);
     }
   };
 
-  // Determine if tooltip should be visible (locked or hover)
+  // Derive tooltip visibility from locked state and hover
   const tooltipVisible = isLocked || showTooltip;
 
   return (
     <>
       <div 
-        ref={cardRef}
+        ref={cardRefCallback}
         onClick={handleCardClick}
         className="aol-box block grant-card"
         onMouseEnter={handleMouseEnter}
@@ -256,13 +280,20 @@ export function GrantCard({ grant, isLocked = false, onLock, onUnlock }: GrantCa
           display: 'block',
           position: 'relative',
           cursor: 'pointer',
-          border: isLocked ? '2px solid var(--primary)' : undefined,
-          transition: 'border 0.2s ease',
         }}
       >
       <div className="flex items-start justify-between gap-2 mb-1" style={{ gap: '12px', marginBottom: '12px', position: 'relative' }}>
         <div className="flex-1">
-          <h3 className="aol-heading compact-mb" style={{ fontSize: '15px', marginBottom: '8px', color: 'var(--primary)' }}>
+          <h3 className="aol-heading compact-mb" style={{ 
+            fontSize: '15px', 
+            marginBottom: '8px', 
+            color: 'var(--primary)',
+            backgroundColor: isLocked ? 'var(--secondary)' : 'transparent',
+            padding: isLocked ? '4px 8px' : '0',
+            borderRadius: isLocked ? '4px' : '0',
+            transition: 'background-color 0.2s ease, padding 0.2s ease, border-radius 0.2s ease',
+            display: 'inline-block',
+          }}>
             {grant.title}
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>

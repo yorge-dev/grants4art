@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { formatTagName } from '@/lib/tag-utils';
 
 interface Tag {
@@ -23,78 +23,107 @@ export function HeroSearch({ onSearch }: HeroSearchProps) {
   const [isTyping, setIsTyping] = useState(true); // true = typing, false = deleting
   const animationRef = useRef<NodeJS.Timeout | null>(null);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const tagsFetchedRef = useRef(false);
+  const animationStartedRef = useRef(false);
 
-  // Fetch tags on mount
-  useEffect(() => {
-    const fetchTags = async () => {
-      try {
-        const response = await fetch('/api/tags');
-        const data = await response.json();
-        if (data.tags && data.tags.length > 0) {
-          setTags(data.tags);
-        }
-      } catch (error) {
-        console.error('Error fetching tags:', error);
-      }
-    };
-    fetchTags();
+  // Fetch tags using ref callback pattern to avoid calling during render
+  const containerRef = useRef<HTMLDivElement>(null);
+  const fetchTagsRef = useRef(false);
+  
+  const containerRefCallback = useCallback((node: HTMLDivElement | null) => {
+    if (node && !fetchTagsRef.current) {
+      fetchTagsRef.current = true;
+      // Fetch tags when container is mounted
+      fetch('/api/tags')
+        .then(response => response.json())
+        .then(data => {
+          if (data.tags && data.tags.length > 0) {
+            setTags(data.tags);
+          }
+        })
+        .catch(error => {
+          console.error('Error fetching tags:', error);
+        });
+    }
   }, []);
 
-  // Animation effect
-  useEffect(() => {
-    const prefix = 'I am a ';
-    const userInput = inputValue.substring(prefix.length);
-    
-    if (!isAnimating || tags.length === 0 || userInput.length > 0) {
-      if (animationRef.current) {
-        clearTimeout(animationRef.current);
-        animationRef.current = null;
+  // Animation step function - uses refs to avoid stale closures
+  const runAnimationStep = useCallback(() => {
+    // Use a function that reads current state
+    const step = () => {
+      const prefix = 'I am a ';
+      const currentInput = inputValue;
+      const userInput = currentInput.substring(prefix.length);
+      
+      if (!isAnimating || tags.length === 0 || userInput.length > 0) {
+        if (animationRef.current) {
+          clearTimeout(animationRef.current);
+          animationRef.current = null;
+        }
+        return;
       }
-      return;
-    }
 
-    const currentTag = tags[currentTagIndex];
-    if (!currentTag) return;
+      const currentTag = tags[currentTagIndex];
+      if (!currentTag) return;
 
-    const baseText = 'I am a ';
-    const fullTagText = formatTagName(currentTag.name);
+      const baseText = 'I am a ';
+      const fullTagText = formatTagName(currentTag.name);
 
-    if (isTyping) {
-      // Typing: add characters left to right
-      if (currentCharIndex < fullTagText.length) {
-        animationRef.current = setTimeout(() => {
-          setDisplayText(baseText + fullTagText.substring(0, currentCharIndex + 1));
-          setCurrentCharIndex(prev => prev + 1);
-        }, 100); // 100ms per character
+      if (isTyping) {
+        // Typing: add characters left to right
+        if (currentCharIndex < fullTagText.length) {
+          animationRef.current = setTimeout(() => {
+            setDisplayText(baseText + fullTagText.substring(0, currentCharIndex + 1));
+            setCurrentCharIndex(prev => {
+              const next = prev + 1;
+              // Schedule next step after state update
+              setTimeout(() => runAnimationStep(), 0);
+              return next;
+            });
+          }, 100); // 100ms per character
+        } else {
+          // Finished typing, wait a bit then start deleting
+          animationRef.current = setTimeout(() => {
+            setIsTyping(false);
+            setTimeout(() => runAnimationStep(), 0);
+          }, 2000); // Wait 2 seconds before deleting
+        }
       } else {
-        // Finished typing, wait a bit then start deleting
-        animationRef.current = setTimeout(() => {
-          setIsTyping(false);
-        }, 2000); // Wait 2 seconds before deleting
-      }
-    } else {
-      // Deleting: remove characters right to left
-      if (currentCharIndex > 0) {
-        animationRef.current = setTimeout(() => {
-          setDisplayText(baseText + fullTagText.substring(0, currentCharIndex - 1));
-          setCurrentCharIndex(prev => prev - 1);
-        }, 50); // 50ms per character (faster deletion)
-      } else {
-        // Finished deleting, move to next tag
-        setIsTyping(true);
-        setCurrentTagIndex(prev => (prev + 1) % tags.length);
-        setCurrentCharIndex(0);
-        setDisplayText(baseText);
-      }
-    }
-
-    return () => {
-      if (animationRef.current) {
-        clearTimeout(animationRef.current);
-        animationRef.current = null;
+        // Deleting: remove characters right to left
+        if (currentCharIndex > 0) {
+          animationRef.current = setTimeout(() => {
+            setDisplayText(baseText + fullTagText.substring(0, currentCharIndex - 1));
+            setCurrentCharIndex(prev => {
+              const next = prev - 1;
+              // Schedule next step after state update
+              setTimeout(() => runAnimationStep(), 0);
+              return next;
+            });
+          }, 50); // 50ms per character (faster deletion)
+        } else {
+          // Finished deleting, move to next tag
+          setIsTyping(true);
+          setCurrentTagIndex(prev => (prev + 1) % tags.length);
+          setCurrentCharIndex(0);
+          setDisplayText(baseText);
+          setTimeout(() => runAnimationStep(), 0);
+        }
       }
     };
+    step();
   }, [isAnimating, tags, currentTagIndex, currentCharIndex, isTyping, inputValue]);
+
+  // Start animation when tags are loaded and conditions are met
+  if (isAnimating && tags.length > 0 && inputValue === 'I am a ' && !animationRef.current && !animationStartedRef.current) {
+    animationStartedRef.current = true;
+    // Use setTimeout to avoid calling during render
+    setTimeout(() => {
+      runAnimationStep();
+    }, 0);
+  }
+  if (!isAnimating) {
+    animationStartedRef.current = false;
+  }
 
   // Handle input change
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -129,6 +158,14 @@ export function HeroSearch({ onSearch }: HeroSearchProps) {
       setIsTyping(true);
       setCurrentTagIndex(0);
       setDisplayText(prefix);
+      animationStartedRef.current = false;
+      // Start animation after state updates
+      setTimeout(() => {
+        if (animationRef.current) {
+          clearTimeout(animationRef.current);
+        }
+        runAnimationStep();
+      }, 0);
     }
 
     // Debounce search - search by the user input part (after prefix)
@@ -138,6 +175,7 @@ export function HeroSearch({ onSearch }: HeroSearchProps) {
 
     searchTimeoutRef.current = setTimeout(() => {
       onSearch(userInput);
+      searchTimeoutRef.current = null;
     }, 300);
   };
 
@@ -166,6 +204,14 @@ export function HeroSearch({ onSearch }: HeroSearchProps) {
       setIsTyping(true);
       setCurrentTagIndex(0);
       setDisplayText(prefix);
+      animationStartedRef.current = false;
+      // Start animation after state updates
+      setTimeout(() => {
+        if (animationRef.current) {
+          clearTimeout(animationRef.current);
+        }
+        runAnimationStep();
+      }, 0);
     }
   };
 
@@ -185,17 +231,6 @@ export function HeroSearch({ onSearch }: HeroSearchProps) {
     }
   };
 
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (animationRef.current) {
-        clearTimeout(animationRef.current);
-      }
-      if (searchTimeoutRef.current) {
-        clearTimeout(searchTimeoutRef.current);
-      }
-    };
-  }, []);
 
 
   // Calculate size - about 1.33x larger than filter search bar
@@ -215,13 +250,15 @@ export function HeroSearch({ onSearch }: HeroSearchProps) {
   };
 
   return (
-    <div style={{ 
-      display: 'flex', 
-      justifyContent: 'center', 
-      alignItems: 'center',
-      marginBottom: '32px',
-      width: '100%'
-    }}>
+    <div 
+      ref={containerRefCallback}
+      style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center',
+        marginBottom: '32px',
+        width: '100%'
+      }}>
       <div style={{
         position: 'relative',
         width: '100%',

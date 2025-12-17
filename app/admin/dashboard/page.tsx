@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { format, isValid } from 'date-fns';
@@ -82,9 +82,19 @@ export default function AdminDashboard() {
   const [newSourceUrl, setNewSourceUrl] = useState('');
   const [addingSource, setAddingSource] = useState(false);
 
-  useEffect(() => {
+  const authCheckedRef = useRef(false);
+  const prevStatusRef = useRef(status);
+
+  // Handle auth status changes
+  if (status !== prevStatusRef.current) {
+    prevStatusRef.current = status;
+    authCheckedRef.current = false;
+  }
+
+  if (!authCheckedRef.current) {
+    authCheckedRef.current = true;
     if (status === 'unauthenticated') {
-      router.push('/admin/login');
+      setTimeout(() => router.push('/admin/login'), 0);
     } else if (status === 'authenticated') {
       Promise.all([
         fetchPendingGrants(),
@@ -92,7 +102,7 @@ export default function AdminDashboard() {
         fetchSources()
       ]).finally(() => setLoading(false));
     }
-  }, [status, router]);
+  }
 
   const fetchPendingGrants = async () => {
     try {

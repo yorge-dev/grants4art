@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -22,14 +22,23 @@ export default function AdminGrantsPage() {
   const router = useRouter();
   const [grants, setGrants] = useState<Grant[]>([]);
   const [loading, setLoading] = useState(true);
+  const authCheckedRef = useRef(false);
+  const prevStatusRef = useRef(status);
 
-  useEffect(() => {
+  // Handle auth status changes
+  if (status !== prevStatusRef.current) {
+    prevStatusRef.current = status;
+    authCheckedRef.current = false;
+  }
+
+  if (!authCheckedRef.current) {
+    authCheckedRef.current = true;
     if (status === 'unauthenticated') {
-      router.push('/admin/login');
+      setTimeout(() => router.push('/admin/login'), 0);
     } else if (status === 'authenticated') {
-      fetchGrants();
+      setTimeout(() => fetchGrants(), 0);
     }
-  }, [status, router]);
+  }
 
   const fetchGrants = async () => {
     setLoading(true);

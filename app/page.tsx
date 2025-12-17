@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { GrantCard } from '@/components/GrantCard';
 import { GrantFilters } from '@/components/GrantFilters';
@@ -50,15 +50,16 @@ export default function Home() {
   const grantsContainerRef = useRef<HTMLDivElement>(null);
 
   const prevFiltersRef = useRef(filters);
+  const mountedRef = useRef(false);
 
-  const fetchGrants = useCallback(async () => {
+  const fetchGrants = useCallback(async (currentFilters = filters, currentPage = pagination.page) => {
     setLoading(true);
     try {
       const params = new URLSearchParams({
-        page: pagination.page.toString(),
+        page: currentPage.toString(),
         limit: '10',
-        ...(filters.search && { search: filters.search }),
-        ...(filters.categories.length > 0 && { categories: filters.categories.join(',') })
+        ...(currentFilters.search && { search: currentFilters.search }),
+        ...(currentFilters.categories.length > 0 && { categories: currentFilters.categories.join(',') })
       });
 
       const response = await fetch(`/api/grants?${params}`);
@@ -88,11 +89,15 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
-  }, [filters, pagination.page]);
+  }, []);
 
-  useEffect(() => {
-    fetchGrants();
-  }, [fetchGrants]);
+  // Fetch on initial mount
+  if (!mountedRef.current) {
+    mountedRef.current = true;
+    setTimeout(() => {
+      fetchGrants(filters, pagination.page);
+    }, 0);
+  }
 
   const handleFilterChange = useCallback((newFilters: typeof filters) => {
     // Check if filters actually changed
@@ -112,8 +117,10 @@ export default function Home() {
       setPagination(prev => ({ ...prev, page: 1 }));
       // Unlock any locked card when filters change
       setLockedGrantId(null);
+      // Fetch with new filters and page 1
+      fetchGrants(newFilters, 1);
     }
-  }, []);
+  }, [fetchGrants]);
 
   const handleLockGrant = useCallback((grantId: string) => {
     setLockedGrantId(grantId);
@@ -124,23 +131,28 @@ export default function Home() {
   }, []);
 
   // Handle click outside to unlock
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (lockedGrantId && grantsContainerRef.current) {
+  const clickOutsideHandlerRef = useRef<((event: MouseEvent) => void) | null>(null);
+  const lockedGrantIdRef = useRef<string | null>(lockedGrantId);
+  
+  // Update ref when lockedGrantId changes
+  lockedGrantIdRef.current = lockedGrantId;
+  
+  // Setup click outside handler when lockedGrantId changes
+  if (lockedGrantId && !clickOutsideHandlerRef.current) {
+    clickOutsideHandlerRef.current = (event: MouseEvent) => {
+      // Read from ref to get current value, not closure
+      if (lockedGrantIdRef.current && grantsContainerRef.current) {
         const target = event.target as Node;
         if (!grantsContainerRef.current.contains(target)) {
           setLockedGrantId(null);
         }
       }
     };
-
-    if (lockedGrantId) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => {
-        document.removeEventListener('mousedown', handleClickOutside);
-      };
-    }
-  }, [lockedGrantId]);
+    document.addEventListener('mousedown', clickOutsideHandlerRef.current);
+  } else if (!lockedGrantId && clickOutsideHandlerRef.current) {
+    document.removeEventListener('mousedown', clickOutsideHandlerRef.current);
+    clickOutsideHandlerRef.current = null;
+  }
 
 
   return (
@@ -273,7 +285,11 @@ export default function Home() {
             {pagination.pages > 1 && (
               <div className="compact-mt" style={{ marginTop: '32px', marginBottom: '24px', display: 'flex', justifyContent: 'center', gap: '8px' }}>
                 <button
-                  onClick={() => setPagination(prev => ({ ...prev, page: Math.max(1, prev.page - 1) }))}
+                  onClick={() => {
+                    const newPage = Math.max(1, pagination.page - 1);
+                    setPagination(prev => ({ ...prev, page: newPage }));
+                    fetchGrants(filters, newPage);
+                  }}
                   disabled={pagination.page === 1}
                   className="aol-button"
                   style={{ opacity: pagination.page === 1 ? 0.5 : 1, cursor: pagination.page === 1 ? 'not-allowed' : 'pointer' }}
@@ -284,7 +300,11 @@ export default function Home() {
                   Page {pagination.page} of {pagination.pages}
                 </span>
                 <button
-                  onClick={() => setPagination(prev => ({ ...prev, page: Math.min(prev.pages, prev.page + 1) }))}
+                  onClick={() => {
+                    const newPage = Math.min(pagination.pages, pagination.page + 1);
+                    setPagination(prev => ({ ...prev, page: newPage }));
+                    fetchGrants(filters, newPage);
+                  }}
                   disabled={pagination.page === pagination.pages}
                   className="aol-button"
                   style={{ opacity: pagination.page === pagination.pages ? 0.5 : 1, cursor: pagination.page === pagination.pages ? 'not-allowed' : 'pointer' }}
