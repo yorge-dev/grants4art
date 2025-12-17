@@ -237,9 +237,6 @@ export default function Home() {
             }} className="w-full md:max-w-[240px]">
               <GrantFilters 
                 onFilterChange={handleFilterChange}
-                loading={loading}
-                page={pagination.page}
-                total={pagination.total}
               />
               <div style={{ marginTop: '24px' }}>
                 <GrantSubmissionForm />
