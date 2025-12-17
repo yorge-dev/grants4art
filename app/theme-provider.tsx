@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, useRef, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 
 type Theme = 'light' | 'grey' | 'grey-inverted' | 'dark';
 
@@ -13,60 +13,50 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const mountedRef = useRef(false);
-  const initializedRef = useRef(false);
-  
-  // Initialize theme from localStorage on first render - use const with IIFE to avoid mutation
-  const initialTheme: Theme = (() => {
-    if (typeof window !== 'undefined' && !initializedRef.current) {
-      initializedRef.current = true;
-      const savedTheme = localStorage.getItem('theme') as Theme | null;
-      if (savedTheme) {
-        return savedTheme;
-      }
+  const [theme, setTheme] = useState<Theme>('light');
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    // Check localStorage for saved theme preference
+    const savedTheme = localStorage.getItem('theme') as Theme | null;
+    if (savedTheme) {
+      setTheme(savedTheme);
+      document.documentElement.setAttribute('data-theme', savedTheme);
+    } else {
+      document.documentElement.setAttribute('data-theme', 'light');
     }
-    return 'light';
-  })();
-  
-  const [theme, setTheme] = useState<Theme>(initialTheme);
-  const prevThemeRef = useRef<Theme>(initialTheme);
+  }, []);
 
-  // Initialize on mount
-  if (typeof window !== 'undefined' && !mountedRef.current) {
-    mountedRef.current = true;
-    document.documentElement.setAttribute('data-theme', initialTheme);
-  }
-
-  // Update theme when it changes
-  const updateTheme = (newTheme: Theme) => {
-    if (prevThemeRef.current === newTheme) return;
-    
-    prevThemeRef.current = newTheme;
-    setTheme(newTheme);
-    
-    // Temporarily hide background pattern during transition
-    document.body.style.setProperty('--pattern-opacity', '0');
-    
-    // Small delay to ensure smooth transition
-    setTimeout(() => {
-      document.documentElement.setAttribute('data-theme', newTheme);
-      localStorage.setItem('theme', newTheme);
+  useEffect(() => {
+    if (mounted) {
+      // Temporarily hide background pattern during transition
+      document.body.style.setProperty('--pattern-opacity', '0');
       
-      // Restore pattern after transition
+      // Small delay to ensure smooth transition
       setTimeout(() => {
-        document.body.style.setProperty('--pattern-opacity', '1');
-      }, 300);
-    }, 10);
-  };
+        document.documentElement.setAttribute('data-theme', theme);
+        localStorage.setItem('theme', theme);
+        
+        // Restore pattern after transition
+        setTimeout(() => {
+          document.body.style.setProperty('--pattern-opacity', '1');
+        }, 300);
+      }, 10);
+    }
+  }, [theme, mounted]);
 
   const toggleTheme = () => {
-    // Reversed order: dark → grey → light → dark
-    const nextTheme = theme === 'dark' ? 'grey' : theme === 'grey' ? 'light' : 'dark';
-    updateTheme(nextTheme);
+    setTheme((prev) => {
+      // Reversed order: dark → grey → light → dark
+      if (prev === 'dark') return 'grey';
+      if (prev === 'grey') return 'light';
+      return 'dark';
+    });
   };
 
   const setThemeDirectly = (newTheme: Theme) => {
-    updateTheme(newTheme);
+    setTheme(newTheme);
   };
 
   // Always provide the context, even before mounting
@@ -84,4 +74,3 @@ export function useTheme() {
   }
   return context;
 }
-

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { DatePicker } from '@/components/DatePicker';
@@ -29,36 +29,21 @@ export default function EditGrantPage({ params }: { params: Promise<{ id: string
     tags: ''
   });
 
-  const paramsResolvedRef = useRef(false);
-  const paramsPromiseRef = useRef<Promise<void> | null>(null);
-  const authCheckedRef = useRef(false);
-  const prevStatusRef = useRef(status);
-  const prevGrantIdRef = useRef(grantId);
+  useEffect(() => {
+    const initializeGrant = async () => {
+      const resolvedParams = await params;
+      setGrantId(resolvedParams.id);
+    };
+    initializeGrant();
+  }, [params]);
 
-  // Resolve params - ensure .then() is only called once
-  if (!paramsResolvedRef.current && !paramsPromiseRef.current) {
-    paramsResolvedRef.current = true;
-    paramsPromiseRef.current = params.then(resolved => {
-      setGrantId(resolved.id);
-      paramsPromiseRef.current = null;
-    });
-  }
-
-  // Handle auth status changes
-  if (status !== prevStatusRef.current) {
-    prevStatusRef.current = status;
-    authCheckedRef.current = false;
-  }
-
-  if (!authCheckedRef.current) {
-    authCheckedRef.current = true;
+  useEffect(() => {
     if (status === 'unauthenticated') {
-      setTimeout(() => router.push('/admin/login'), 0);
-    } else if (status === 'authenticated' && grantId && grantId !== prevGrantIdRef.current) {
-      prevGrantIdRef.current = grantId;
-      setTimeout(() => fetchGrant(), 0);
+      router.push('/admin/login');
+    } else if (status === 'authenticated' && grantId) {
+      fetchGrant();
     }
-  }
+  }, [status, router, grantId]);
 
   const fetchGrant = async () => {
     try {

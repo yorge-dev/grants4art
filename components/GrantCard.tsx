@@ -127,6 +127,56 @@ export function GrantCard({ grant, isLocked = false, onLock, onUnlock }: GrantCa
     }
   }, []);
 
+  // Setup intersection observer using ref callback
+  const setupIntersectionObserver = useCallback(() => {
+    if (!isMobileRef.current || !cardRef.current || observerRef.current) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          // Clear any pending lock timeout
+          if (lockTimeoutRef.current) {
+            clearTimeout(lockTimeoutRef.current);
+            lockTimeoutRef.current = null;
+          }
+
+          // Check if card is centered in viewport
+          if (entry.isIntersecting && entry.intersectionRatio > 0.6) {
+            const rect = entry.boundingClientRect;
+            const viewportHeight = window.innerHeight;
+            const viewportCenter = viewportHeight / 2;
+            const cardCenter = rect.top + rect.height / 2;
+            
+            // Check if card center is within 30% of viewport center
+            const distanceFromCenter = Math.abs(cardCenter - viewportCenter);
+            const threshold = viewportHeight * 0.3;
+            
+            if (distanceFromCenter < threshold && onLock && !isLocked) {
+              // Add a small delay to prevent rapid locking during scroll
+              // When a new card locks, the parent will automatically unlock the previous one
+              lockTimeoutRef.current = setTimeout(() => {
+                // Double-check conditions after delay
+                if (onLock && !isLocked) {
+                  onLock(grant.id);
+                }
+                lockTimeoutRef.current = null;
+              }, 300); // 300ms delay to stabilize during scroll
+            }
+          }
+          // Note: We don't auto-unlock when leaving viewport
+          // Cards stay locked until user clicks elsewhere or another card locks
+        });
+      },
+      {
+        threshold: [0, 0.3, 0.6, 0.9, 1],
+        rootMargin: '-20% 0px -20% 0px' // Only trigger when card is in center 60% of viewport
+      }
+    );
+
+    observer.observe(cardRef.current);
+    observerRef.current = observer;
+  }, [isLocked, onLock, grant.id]);
+
   // Cleanup resize listener on unmount using ref callback
   const cardRefCallback = useCallback((node: HTMLDivElement | null) => {
     // Cleanup previous observer
@@ -182,56 +232,6 @@ export function GrantCard({ grant, isLocked = false, onLock, onUnlock }: GrantCa
       hideTimeoutRef.current = null;
     }, 150); // 150ms delay
   };
-
-  // Setup intersection observer using ref callback
-  const setupIntersectionObserver = useCallback(() => {
-    if (!isMobileRef.current || !cardRef.current || observerRef.current) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          // Clear any pending lock timeout
-          if (lockTimeoutRef.current) {
-            clearTimeout(lockTimeoutRef.current);
-            lockTimeoutRef.current = null;
-          }
-
-          // Check if card is centered in viewport
-          if (entry.isIntersecting && entry.intersectionRatio > 0.6) {
-            const rect = entry.boundingClientRect;
-            const viewportHeight = window.innerHeight;
-            const viewportCenter = viewportHeight / 2;
-            const cardCenter = rect.top + rect.height / 2;
-            
-            // Check if card center is within 30% of viewport center
-            const distanceFromCenter = Math.abs(cardCenter - viewportCenter);
-            const threshold = viewportHeight * 0.3;
-            
-            if (distanceFromCenter < threshold && onLock && !isLocked) {
-              // Add a small delay to prevent rapid locking during scroll
-              // When a new card locks, the parent will automatically unlock the previous one
-              lockTimeoutRef.current = setTimeout(() => {
-                // Double-check conditions after delay
-                if (onLock && !isLocked) {
-                  onLock(grant.id);
-                }
-                lockTimeoutRef.current = null;
-              }, 300); // 300ms delay to stabilize during scroll
-            }
-          }
-          // Note: We don't auto-unlock when leaving viewport
-          // Cards stay locked until user clicks elsewhere or another card locks
-        });
-      },
-      {
-        threshold: [0, 0.3, 0.6, 0.9, 1],
-        rootMargin: '-20% 0px -20% 0px' // Only trigger when card is in center 60% of viewport
-      }
-    );
-
-    observer.observe(cardRef.current);
-    observerRef.current = observer;
-  }, [isLocked, onLock, grant.id]);
 
 
   const handleCardClick = (e: React.MouseEvent) => {

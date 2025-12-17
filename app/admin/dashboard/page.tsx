@@ -82,8 +82,8 @@ export default function AdminDashboard() {
   const [newSourceUrl, setNewSourceUrl] = useState('');
   const [addingSource, setAddingSource] = useState(false);
 
-  // Declare fetch functions before they're used
-  const fetchPendingGrants = async () => {
+  // Declare fetch functions as function declarations (hoisted) before they're used
+  async function fetchPendingGrants() {
     try {
       const response = await fetch('/api/grants?limit=1000');
       const data = await response.json();
@@ -91,9 +91,9 @@ export default function AdminDashboard() {
     } catch (error) {
       console.error('Error fetching grants:', error);
     }
-  };
+  }
 
-  const fetchJobs = async () => {
+  async function fetchJobs() {
     try {
       const response = await fetch('/api/scrape');
       const data = await response.json();
@@ -101,9 +101,9 @@ export default function AdminDashboard() {
     } catch (error) {
       console.error('Error fetching scrape jobs:', error);
     }
-  };
+  }
 
-  const fetchSources = async () => {
+  async function fetchSources() {
     try {
       const response = await fetch('/api/scrape/sources');
       const data = await response.json();
@@ -111,7 +111,7 @@ export default function AdminDashboard() {
     } catch (error) {
       console.error('Error fetching sources:', error);
     }
-  };
+  }
 
   const authCheckedRef = useRef(false);
   const prevStatusRef = useRef(status);
