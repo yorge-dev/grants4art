@@ -32,10 +32,11 @@ const prisma = new PrismaClient({ adapter });
 async function createAdmin() {
   const email = process.env.ADMIN_EMAIL!;
   const password = process.env.ADMIN_PASSWORD!;
+  const databaseUrl = process.env.DATABASE_URL!;
 
   console.log('🔧 Creating/updating admin user in production...\n');
   console.log('Email:', email);
-  console.log('DATABASE_URL:', process.env.DATABASE_URL.substring(0, 30) + '...');
+  console.log('DATABASE_URL:', databaseUrl.substring(0, 30) + '...');
   console.log('');
 
   try {
