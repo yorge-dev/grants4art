@@ -82,28 +82,7 @@ export default function AdminDashboard() {
   const [newSourceUrl, setNewSourceUrl] = useState('');
   const [addingSource, setAddingSource] = useState(false);
 
-  const authCheckedRef = useRef(false);
-  const prevStatusRef = useRef(status);
-
-  // Handle auth status changes
-  if (status !== prevStatusRef.current) {
-    prevStatusRef.current = status;
-    authCheckedRef.current = false;
-  }
-
-  if (!authCheckedRef.current) {
-    authCheckedRef.current = true;
-    if (status === 'unauthenticated') {
-      setTimeout(() => router.push('/admin/login'), 0);
-    } else if (status === 'authenticated') {
-      Promise.all([
-        fetchPendingGrants(),
-        fetchJobs(),
-        fetchSources()
-      ]).finally(() => setLoading(false));
-    }
-  }
-
+  // Declare fetch functions before they're used
   const fetchPendingGrants = async () => {
     try {
       const response = await fetch('/api/grants?limit=1000');
@@ -133,6 +112,28 @@ export default function AdminDashboard() {
       console.error('Error fetching sources:', error);
     }
   };
+
+  const authCheckedRef = useRef(false);
+  const prevStatusRef = useRef(status);
+
+  // Handle auth status changes
+  if (status !== prevStatusRef.current) {
+    prevStatusRef.current = status;
+    authCheckedRef.current = false;
+  }
+
+  if (!authCheckedRef.current) {
+    authCheckedRef.current = true;
+    if (status === 'unauthenticated') {
+      setTimeout(() => router.push('/admin/login'), 0);
+    } else if (status === 'authenticated') {
+      Promise.all([
+        fetchPendingGrants(),
+        fetchJobs(),
+        fetchSources()
+      ]).finally(() => setLoading(false));
+    }
+  }
 
   // Grant Sorting
   const handleSort = (key: keyof Grant) => {
