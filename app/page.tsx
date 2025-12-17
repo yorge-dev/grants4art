@@ -46,6 +46,8 @@ export default function Home() {
     totalAmount: 0
   });
   const [isVersionNotesExpanded, setIsVersionNotesExpanded] = useState(false);
+  const [lockedGrantId, setLockedGrantId] = useState<string | null>(null);
+  const grantsContainerRef = useRef<HTMLDivElement>(null);
 
   const prevFiltersRef = useRef(filters);
 
@@ -108,8 +110,37 @@ export default function Home() {
     // Only reset pagination if filters actually changed
     if (filtersChanged) {
       setPagination(prev => ({ ...prev, page: 1 }));
+      // Unlock any locked card when filters change
+      setLockedGrantId(null);
     }
   }, []);
+
+  const handleLockGrant = useCallback((grantId: string) => {
+    setLockedGrantId(grantId);
+  }, []);
+
+  const handleUnlockGrant = useCallback(() => {
+    setLockedGrantId(null);
+  }, []);
+
+  // Handle click outside to unlock
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (lockedGrantId && grantsContainerRef.current) {
+        const target = event.target as Node;
+        if (!grantsContainerRef.current.contains(target)) {
+          setLockedGrantId(null);
+        }
+      }
+    };
+
+    if (lockedGrantId) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }
+  }, [lockedGrantId]);
 
 
   return (
@@ -179,10 +210,9 @@ export default function Home() {
         {/* Sidebar Layout: Filters on left, Grants on right */}
         <div style={{ 
           display: 'flex', 
-          flexDirection: 'column',
           gap: '24px', 
           alignItems: 'flex-start'
-        }} className="md:flex-row">
+        }} className="flex-col md:flex-row">
           {/* Sidebar Filters */}
           <aside style={{ 
             flexShrink: 0
@@ -222,9 +252,19 @@ export default function Home() {
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 gap-2" style={{ gap: '16px', marginBottom: '24px' }}>
+              <div 
+                ref={grantsContainerRef}
+                className="grid grid-cols-1 gap-2" 
+                style={{ gap: '16px', marginBottom: '24px' }}
+              >
                 {grants.map((grant) => (
-                  <GrantCard key={grant.id} grant={grant} />
+                  <GrantCard 
+                    key={grant.id} 
+                    grant={grant}
+                    isLocked={lockedGrantId === grant.id}
+                    onLock={() => handleLockGrant(grant.id)}
+                    onUnlock={handleUnlockGrant}
+                  />
                 ))}
               </div>
             )}

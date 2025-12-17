@@ -1,6 +1,5 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
 import { useState, useRef, useEffect } from 'react';
 import { formatTagName } from '@/lib/tag-utils';
@@ -28,6 +27,9 @@ interface Grant {
 
 interface GrantCardProps {
   grant: Grant;
+  isLocked?: boolean;
+  onLock?: () => void;
+  onUnlock?: () => void;
 }
 
 interface GrantTooltipProps {
@@ -76,12 +78,13 @@ function GrantTooltip({ description, eligibility, isVisible }: GrantTooltipProps
   );
 }
 
-export function GrantCard({ grant }: GrantCardProps) {
-  const router = useRouter();
+export function GrantCard({ grant, isLocked = false, onLock, onUnlock }: GrantCardProps) {
   const deadline = grant.deadline ? new Date(grant.deadline) : null;
   const isExpired = deadline && deadline < new Date();
   const [showTooltip, setShowTooltip] = useState(false);
   const hideTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const isMobileRef = useRef(false);
 
   // Format amount display - prefer amountMin/amountMax if available, otherwise use amount string
   const formatAmount = () => {
@@ -103,6 +106,9 @@ export function GrantCard({ grant }: GrantCardProps) {
   const displayAmount = formatAmount();
 
   const handleMouseEnter = () => {
+    // Don't show tooltip on hover if card is locked or on mobile
+    if (isLocked || isMobileRef.current) return;
+    
     // Clear any pending hide timeout
     if (hideTimeoutRef.current) {
       clearTimeout(hideTimeoutRef.current);
@@ -112,6 +118,9 @@ export function GrantCard({ grant }: GrantCardProps) {
   };
 
   const handleMouseLeave = () => {
+    // Don't hide tooltip if card is locked or on mobile
+    if (isLocked || isMobileRef.current) return;
+    
     // Add a small delay before hiding to prevent flickering when moving between cards
     hideTimeoutRef.current = setTimeout(() => {
       setShowTooltip(false);
@@ -128,18 +137,113 @@ export function GrantCard({ grant }: GrantCardProps) {
     };
   }, []);
 
+  // Detect mobile devices
+  useEffect(() => {
+    const checkMobile = () => {
+      isMobileRef.current = window.matchMedia('(max-width: 768px)').matches || 
+                           'ontouchstart' in window ||
+                           navigator.maxTouchPoints > 0;
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Intersection Observer for mobile viewport detection
+  useEffect(() => {
+    if (!isMobileRef.current || !cardRef.current) return;
+
+    let lockTimeoutRef: NodeJS.Timeout | null = null;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          // Clear any pending lock timeout
+          if (lockTimeoutRef) {
+            clearTimeout(lockTimeoutRef);
+            lockTimeoutRef = null;
+          }
+
+          // Check if card is centered in viewport
+          if (entry.isIntersecting && entry.intersectionRatio > 0.6) {
+            const rect = entry.boundingClientRect;
+            const viewportHeight = window.innerHeight;
+            const viewportCenter = viewportHeight / 2;
+            const cardCenter = rect.top + rect.height / 2;
+            
+            // Check if card center is within 30% of viewport center
+            const distanceFromCenter = Math.abs(cardCenter - viewportCenter);
+            const threshold = viewportHeight * 0.3;
+            
+            if (distanceFromCenter < threshold && onLock && !isLocked) {
+              // Add a small delay to prevent rapid locking during scroll
+              // When a new card locks, the parent will automatically unlock the previous one
+              lockTimeoutRef = setTimeout(() => {
+                // Double-check conditions after delay
+                if (onLock && !isLocked) {
+                  onLock();
+                }
+                lockTimeoutRef = null;
+              }, 300); // 300ms delay to stabilize during scroll
+            }
+          }
+          // Note: We don't auto-unlock when leaving viewport
+          // Cards stay locked until user clicks elsewhere or another card locks
+        });
+      },
+      {
+        threshold: [0, 0.3, 0.6, 0.9, 1],
+        rootMargin: '-20% 0px -20% 0px' // Only trigger when card is in center 60% of viewport
+      }
+    );
+
+    observer.observe(cardRef.current);
+
+    return () => {
+      if (lockTimeoutRef) {
+        clearTimeout(lockTimeoutRef);
+      }
+      observer.disconnect();
+    };
+  }, [isLocked, onLock]);
+
+  // Update tooltip visibility based on locked state
+  useEffect(() => {
+    if (isLocked) {
+      setShowTooltip(true);
+      // Clear any pending hide timeout
+      if (hideTimeoutRef.current) {
+        clearTimeout(hideTimeoutRef.current);
+        hideTimeoutRef.current = null;
+      }
+    } else if (!isMobileRef.current) {
+      // On desktop, hide tooltip when unlocked (unless hovering)
+      // The hover handlers will manage this
+    }
+  }, [isLocked]);
+
   const handleCardClick = (e: React.MouseEvent) => {
     // Don't navigate if clicking on the application URL link
     const target = e.target as HTMLElement;
     if (target.closest('span[data-apply-link]')) {
       return;
     }
-    router.push(`/grants/${grant.id}`);
+
+    // Toggle lock state instead of navigating
+    if (isLocked && onUnlock) {
+      onUnlock();
+    } else if (!isLocked && onLock) {
+      onLock();
+    }
   };
+
+  // Determine if tooltip should be visible (locked or hover)
+  const tooltipVisible = isLocked || showTooltip;
 
   return (
     <>
       <div 
+        ref={cardRef}
         onClick={handleCardClick}
         className="aol-box block grant-card"
         onMouseEnter={handleMouseEnter}
@@ -152,6 +256,8 @@ export function GrantCard({ grant }: GrantCardProps) {
           display: 'block',
           position: 'relative',
           cursor: 'pointer',
+          border: isLocked ? '2px solid var(--primary)' : undefined,
+          transition: 'border 0.2s ease',
         }}
       >
       <div className="flex items-start justify-between gap-2 mb-1" style={{ gap: '12px', marginBottom: '12px', position: 'relative' }}>
@@ -258,15 +364,15 @@ export function GrantCard({ grant }: GrantCardProps) {
         style={{ 
           fontSize: '12px', 
           color: 'var(--foreground)', 
-          marginBottom: showTooltip ? '0' : '12px', 
+          marginBottom: tooltipVisible ? '0' : '12px', 
           lineHeight: '1.3',
           display: '-webkit-box',
           WebkitLineClamp: 2,
           WebkitBoxOrient: 'vertical',
           overflow: 'hidden',
           textOverflow: 'ellipsis',
-          opacity: showTooltip ? 0 : 1,
-          maxHeight: showTooltip ? '0' : 'none',
+          opacity: tooltipVisible ? 0 : 1,
+          maxHeight: tooltipVisible ? '0' : 'none',
           transition: 'opacity 0.3s ease, max-height 0.3s ease, margin-bottom 0.3s ease',
         }}
       >
@@ -278,7 +384,7 @@ export function GrantCard({ grant }: GrantCardProps) {
       <GrantTooltip
         description={grant.description}
         eligibility={grant.eligibility || null}
-        isVisible={showTooltip}
+        isVisible={tooltipVisible}
       />
     </div>
     </>
