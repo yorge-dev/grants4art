@@ -97,8 +97,8 @@ DATABASE_URL="postgresql://user:password@localhost:5432/txartgrants?schema=publi
 GEMINI_API_KEY="your-gemini-api-key"
 NEXTAUTH_URL="http://localhost:3000"
 NEXTAUTH_SECRET="your-secret-here"
-ADMIN_EMAIL="admin@txartgrants.com"
-ADMIN_PASSWORD="changeme123"
+ADMIN_EMAIL="your-admin-email@example.com"
+ADMIN_PASSWORD="your-secure-password-here"
 
 # .env
 DATABASE_URL="postgresql://user:password@localhost:5432/txartgrants?schema=public"

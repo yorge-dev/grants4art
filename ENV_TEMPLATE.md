@@ -16,8 +16,8 @@ NEXTAUTH_URL="http://localhost:3000"
 NEXTAUTH_SECRET="your-nextauth-secret-here-change-in-production"
 
 # Admin
-ADMIN_EMAIL="admin@txartgrants.com"
-ADMIN_PASSWORD="changeme123"
+ADMIN_EMAIL="your-admin-email@example.com"
+ADMIN_PASSWORD="your-secure-password-here"
 ```
 
 ## .env (for Prisma)
