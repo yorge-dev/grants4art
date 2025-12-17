@@ -129,7 +129,7 @@ export function GrantFilters({ onFilterChange, loading = false, page = 1, total 
 
   return (
     <div className="aol-box" style={{ 
-      width: '240px', 
+      width: '100%',
       padding: '16px',
       height: 'fit-content'
     }}>

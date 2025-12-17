@@ -2,7 +2,7 @@
 
 ## Overview
 
-A full-stack web application for discovering and aggregating grant opportunities for designers and artists in Texas. The platform features AI-powered grant discovery, an admin review system, and a clean public interface inspired by layoffs.fyi.
+A full-stack web application for discovering and aggregating grant opportunities for designers and across the nation and based on a user's location. The platform features AI-powered grant discovery, an admin review system, and a clean public interface that is simple
 
 ## What Was Built
 
@@ -51,7 +51,7 @@ A full-stack web application for discovering and aggregating grant opportunities
 - Grid view of approved grants
 - Real-time search and filtering
 - Responsive card-based layout
-- Minimal, clean design inspired by layoffs.fyi
+- Minimal, clean design that is simple
 
 **Grant Detail Page (`/grants/[id]`)**
 - Full grant information display

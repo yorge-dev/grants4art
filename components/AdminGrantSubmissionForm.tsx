@@ -154,7 +154,7 @@ export function AdminGrantSubmissionForm() {
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       style={{
-        width: isExpanded ? '240px' : 'auto',
+        width: isExpanded ? '100%' : 'auto',
         padding: '16px',
         height: 'fit-content',
         position: 'relative',
@@ -278,6 +278,10 @@ export function AdminGrantSubmissionForm() {
     </div>
   );
 }
+
+
+
+
 
 
 

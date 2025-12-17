@@ -1,6 +1,6 @@
 # Texas Art Grants
 
-A full-stack grants aggregation website for designers and artists in Texas, featuring AI-powered automated grant discovery, admin review workflow, and a clean public interface.
+A full-stack grants aggregation website for designers and artists based on a user's location, featuring AI-powered automated grant discovery, admin review workflow, and a clean public interface.
 
 ## 🚀 Quick Start
 
@@ -14,13 +14,12 @@ Get up and running in 5 minutes with our step-by-step guide.
 - **AI-Powered Discovery**: Automated grant extraction using Google Gemini AI  
 - **Admin Dashboard**: Review and approve grants before publication
 - **Manual Entry**: Add grants manually through the admin interface
-- **Scraping Tools**: Python scraper for scheduled automation
-- **Responsive Design**: Mobile-friendly interface inspired by layoffs.fyi
+- **Responsive Design**: Mobile-friendly interface that is simple
 
 ## 🛠 Tech Stack
 
-- **Frontend**: Next.js 14+ (App Router), React 19, TypeScript, Tailwind CSS
-- **Database**: PostgreSQL with Prisma ORM
+- **Frontend**: Next.js 16+ (App Router), React 19, TypeScript, Tailwind CSS
+- **Database**: PostgreSQL with Prisma ORM 7.x
 - **Authentication**: NextAuth.js with bcrypt
 - **AI**: Google Gemini API for grant extraction
 - **Deployment**: Vercel + Railway/Supabase

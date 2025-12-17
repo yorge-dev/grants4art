@@ -177,15 +177,22 @@ export default function Home() {
         </div>
 
         {/* Sidebar Layout: Filters on left, Grants on right */}
-        <div style={{ display: 'flex', gap: '24px', alignItems: 'flex-start' }}>
+        <div style={{ 
+          display: 'flex', 
+          flexDirection: 'column',
+          gap: '24px', 
+          alignItems: 'flex-start'
+        }} className="md:flex-row">
           {/* Sidebar Filters */}
-          <aside style={{ flexShrink: 0 }}>
+          <aside style={{ 
+            flexShrink: 0
+          }} className="w-full md:w-auto">
             <div style={{ 
               position: 'sticky', 
               top: '20px',
               display: 'flex',
               flexDirection: 'column'
-            }}>
+            }} className="w-full md:max-w-[240px]">
               <GrantFilters 
                 onFilterChange={handleFilterChange}
                 loading={loading}
@@ -199,7 +206,7 @@ export default function Home() {
           </aside>
 
           {/* Grants List */}
-          <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ flex: 1, minWidth: 0 }} className="w-full md:w-auto">
             {/* Grants Grid */}
             {loading ? (
               <div className="text-center aol-box-inset" style={{ padding: '32px', margin: '0 8px 24px 8px' }}>
