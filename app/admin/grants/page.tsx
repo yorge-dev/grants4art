@@ -93,13 +93,6 @@ export default function AdminGrantsPage() {
               {grants.length} total grants
             </p>
           </div>
-          <Link
-            href="/admin/grants/new"
-            className="aol-button"
-            style={{ textDecoration: 'none', fontSize: '13px', padding: '4px 10px' }}
-          >
-            <span className="material-icons" style={{ fontSize: '14px', verticalAlign: 'middle', marginRight: '4px' }}>add</span> Add New Grant
-          </Link>
         </div>
 
         <div className="aol-box" style={{ overflow: 'auto', margin: '0 8px' }}>
