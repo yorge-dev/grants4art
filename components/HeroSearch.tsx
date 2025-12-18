@@ -23,22 +23,174 @@ export function HeroSearch({ onSearch }: HeroSearchProps) {
   const [isTyping, setIsTyping] = useState(true); // true = typing, false = deleting
   const animationRef = useRef<NodeJS.Timeout | null>(null);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const tagsFetchedRef = useRef(false);
-  const animationStartedRef = useRef(false);
-
-  // Fetch tags using ref callback pattern to avoid calling during render
-  const containerRef = useRef<HTMLDivElement>(null);
   const fetchTagsRef = useRef(false);
-  
+  const animationStartedRef = useRef(false);
+  const isAnimatingRef = useRef(isAnimating);
+  const tagsRef = useRef(tags);
+  const currentTagIndexRef = useRef(currentTagIndex);
+  const currentCharIndexRef = useRef(currentCharIndex);
+  const isTypingRef = useRef(isTyping);
+  const inputValueRef = useRef(inputValue);
+  const pendingStartRef = useRef(false);
+
+  // Keep refs in sync with state
+  isAnimatingRef.current = isAnimating;
+  tagsRef.current = tags;
+  currentTagIndexRef.current = currentTagIndex;
+  currentCharIndexRef.current = currentCharIndex;
+  isTypingRef.current = isTyping;
+  inputValueRef.current = inputValue;
+
+  // Animation step function using refs to avoid stale closures
+  const runAnimationStep = useCallback(() => {
+    const prefix = 'I am a ';
+    const currentInput = inputValueRef.current;
+    const userInput = currentInput.substring(prefix.length);
+    
+    // Stop animation if conditions aren't met
+    if (!isAnimatingRef.current || tagsRef.current.length === 0 || userInput.length > 0) {
+      if (animationRef.current) {
+        clearTimeout(animationRef.current);
+        animationRef.current = null;
+      }
+      animationStartedRef.current = false;
+      return;
+    }
+
+    const currentTag = tagsRef.current[currentTagIndexRef.current];
+    if (!currentTag) {
+      // If no tag at current index, reset to first tag
+      if (tagsRef.current.length > 0) {
+        currentTagIndexRef.current = 0;
+        setCurrentTagIndex(0);
+        currentCharIndexRef.current = 0;
+        setCurrentCharIndex(0);
+        setIsTyping(true);
+        isTypingRef.current = true;
+        setDisplayText(prefix);
+        animationRef.current = setTimeout(() => {
+          runAnimationStep();
+        }, 100);
+      } else {
+        animationStartedRef.current = false;
+      }
+      return;
+    }
+
+    const baseText = 'I am a ';
+    const fullTagText = formatTagName(currentTag.name);
+
+    if (isTypingRef.current) {
+      // Typing: add characters left to right
+      if (currentCharIndexRef.current < fullTagText.length) {
+        const nextCharIndex = currentCharIndexRef.current + 1;
+        const newDisplayText = baseText + fullTagText.substring(0, nextCharIndex);
+        setDisplayText(newDisplayText);
+        setCurrentCharIndex(nextCharIndex);
+        currentCharIndexRef.current = nextCharIndex;
+        
+        animationRef.current = setTimeout(() => {
+          runAnimationStep();
+        }, 100); // 100ms per character
+      } else {
+        // Finished typing, wait a bit then start deleting
+        animationRef.current = setTimeout(() => {
+          setIsTyping(false);
+          isTypingRef.current = false;
+          runAnimationStep();
+        }, 2000); // Wait 2 seconds before deleting
+      }
+    } else {
+      // Deleting: remove characters right to left
+      if (currentCharIndexRef.current > 0) {
+        const nextCharIndex = currentCharIndexRef.current - 1;
+        const newDisplayText = baseText + fullTagText.substring(0, nextCharIndex);
+        setDisplayText(newDisplayText);
+        setCurrentCharIndex(nextCharIndex);
+        currentCharIndexRef.current = nextCharIndex;
+        
+        animationRef.current = setTimeout(() => {
+          runAnimationStep();
+        }, 50); // 50ms per character (faster deletion)
+      } else {
+        // Finished deleting, move to next tag
+        const nextTagIndex = (currentTagIndexRef.current + 1) % tagsRef.current.length;
+        setIsTyping(true);
+        isTypingRef.current = true;
+        setCurrentTagIndex(nextTagIndex);
+        currentTagIndexRef.current = nextTagIndex;
+        setCurrentCharIndex(0);
+        currentCharIndexRef.current = 0;
+        setDisplayText(baseText);
+        
+        animationRef.current = setTimeout(() => {
+          runAnimationStep();
+        }, 300); // Small delay before starting next tag
+      }
+    }
+  }, []);
+
+  // Start animation function
+  const startAnimation = useCallback(() => {
+    // Clear any existing animation
+    if (animationRef.current) {
+      clearTimeout(animationRef.current);
+      animationRef.current = null;
+    }
+    
+    // Check conditions
+    if (!isAnimatingRef.current || 
+        tagsRef.current.length === 0 || 
+        inputValueRef.current !== 'I am a ') {
+      animationStartedRef.current = false;
+      return;
+    }
+    
+    // Only start if not already started
+    if (animationStartedRef.current) {
+      return;
+    }
+    
+    // Initialize animation state
+    animationStartedRef.current = true;
+    setCurrentTagIndex(0);
+    currentTagIndexRef.current = 0;
+    setCurrentCharIndex(0);
+    currentCharIndexRef.current = 0;
+    setIsTyping(true);
+    isTypingRef.current = true;
+    setDisplayText('I am a ');
+    
+    // Start the animation immediately - runAnimationStep uses refs so it will work
+    // Use setTimeout to avoid calling during render
+    setTimeout(() => {
+      runAnimationStep();
+    }, 0);
+  }, [runAnimationStep]);
+
+  // Store startAnimation in a ref so it can be accessed in containerRefCallback
+  const startAnimationRef = useRef(startAnimation);
+  startAnimationRef.current = startAnimation;
+
+  // Fetch tags using ref callback pattern
   const containerRefCallback = useCallback((node: HTMLDivElement | null) => {
     if (node && !fetchTagsRef.current) {
       fetchTagsRef.current = true;
-      // Fetch tags when container is mounted
       fetch('/api/tags')
         .then(response => response.json())
         .then(data => {
           if (data.tags && data.tags.length > 0) {
             setTags(data.tags);
+            tagsRef.current = data.tags;
+            // Reset animation state when tags load
+            animationStartedRef.current = false;
+            pendingStartRef.current = false;
+            // Start animation when tags are loaded
+            setTimeout(() => {
+              if (isAnimatingRef.current && inputValueRef.current === 'I am a ') {
+                startAnimationRef.current();
+              }
+            }, 200); // Small delay to ensure state is updated
           }
         })
         .catch(error => {
@@ -47,82 +199,22 @@ export function HeroSearch({ onSearch }: HeroSearchProps) {
     }
   }, []);
 
-  // Animation step function - uses refs to avoid stale closures
-  const runAnimationStep = useCallback(() => {
-    // Use a function that reads current state
-    const step = () => {
-      const prefix = 'I am a ';
-      const currentInput = inputValue;
-      const userInput = currentInput.substring(prefix.length);
-      
-      if (!isAnimating || tags.length === 0 || userInput.length > 0) {
-        if (animationRef.current) {
-          clearTimeout(animationRef.current);
-          animationRef.current = null;
-        }
-        return;
-      }
-
-      const currentTag = tags[currentTagIndex];
-      if (!currentTag) return;
-
-      const baseText = 'I am a ';
-      const fullTagText = formatTagName(currentTag.name);
-
-      if (isTyping) {
-        // Typing: add characters left to right
-        if (currentCharIndex < fullTagText.length) {
-          animationRef.current = setTimeout(() => {
-            setDisplayText(baseText + fullTagText.substring(0, currentCharIndex + 1));
-            setCurrentCharIndex(prev => {
-              const next = prev + 1;
-              // Schedule next step after state update
-              setTimeout(() => runAnimationStep(), 0);
-              return next;
-            });
-          }, 100); // 100ms per character
-        } else {
-          // Finished typing, wait a bit then start deleting
-          animationRef.current = setTimeout(() => {
-            setIsTyping(false);
-            setTimeout(() => runAnimationStep(), 0);
-          }, 2000); // Wait 2 seconds before deleting
-        }
-      } else {
-        // Deleting: remove characters right to left
-        if (currentCharIndex > 0) {
-          animationRef.current = setTimeout(() => {
-            setDisplayText(baseText + fullTagText.substring(0, currentCharIndex - 1));
-            setCurrentCharIndex(prev => {
-              const next = prev - 1;
-              // Schedule next step after state update
-              setTimeout(() => runAnimationStep(), 0);
-              return next;
-            });
-          }, 50); // 50ms per character (faster deletion)
-        } else {
-          // Finished deleting, move to next tag
-          setIsTyping(true);
-          setCurrentTagIndex(prev => (prev + 1) % tags.length);
-          setCurrentCharIndex(0);
-          setDisplayText(baseText);
-          setTimeout(() => runAnimationStep(), 0);
-        }
-      }
-    };
-    step();
-  }, [isAnimating, tags, currentTagIndex, currentCharIndex, isTyping, inputValue]);
-
-  // Start animation when tags are loaded and conditions are met
-  if (isAnimating && tags.length > 0 && inputValue === 'I am a ' && !animationRef.current && !animationStartedRef.current) {
-    animationStartedRef.current = true;
-    // Use setTimeout to avoid calling during render
+  // Check if we should start animation when state changes
+  // This handles cases where tags are loaded but animation hasn't started
+  if (isAnimating && tags.length > 0 && inputValue === 'I am a ' && !animationStartedRef.current && !animationRef.current && !pendingStartRef.current) {
+    pendingStartRef.current = true;
     setTimeout(() => {
-      runAnimationStep();
+      pendingStartRef.current = false;
+      startAnimation();
     }, 0);
   }
+  
   if (!isAnimating) {
     animationStartedRef.current = false;
+    if (animationRef.current) {
+      clearTimeout(animationRef.current);
+      animationRef.current = null;
+    }
   }
 
   // Handle input change
@@ -143,29 +235,33 @@ export function HeroSearch({ onSearch }: HeroSearchProps) {
     
     const userInput = value.substring(prefix.length);
     setInputValue(value);
+    inputValueRef.current = value;
     
     // Stop animation when user starts typing
     if (userInput.length > 0 && isAnimating) {
       setIsAnimating(false);
+      isAnimatingRef.current = false;
       if (animationRef.current) {
         clearTimeout(animationRef.current);
         animationRef.current = null;
       }
+      animationStartedRef.current = false;
     } else if (userInput.length === 0) {
       // Restart animation when input is cleared (only prefix remains)
       setIsAnimating(true);
+      isAnimatingRef.current = true;
       setCurrentCharIndex(0);
+      currentCharIndexRef.current = 0;
       setIsTyping(true);
+      isTypingRef.current = true;
       setCurrentTagIndex(0);
+      currentTagIndexRef.current = 0;
       setDisplayText(prefix);
       animationStartedRef.current = false;
       // Start animation after state updates
       setTimeout(() => {
-        if (animationRef.current) {
-          clearTimeout(animationRef.current);
-        }
-        runAnimationStep();
-      }, 0);
+        startAnimation();
+      }, 100);
     }
 
     // Debounce search - search by the user input part (after prefix)
@@ -182,12 +278,18 @@ export function HeroSearch({ onSearch }: HeroSearchProps) {
   // Handle input focus
   const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
     const prefix = 'I am a ';
-    const userInput = inputValue.substring(prefix.length);
-    if (userInput.length === 0 && isAnimating) {
+    const userInput = inputValueRef.current.substring(prefix.length);
+    if (userInput.length === 0 && isAnimatingRef.current) {
       setIsAnimating(false);
+      isAnimatingRef.current = false;
+      if (animationRef.current) {
+        clearTimeout(animationRef.current);
+        animationRef.current = null;
+      }
+      animationStartedRef.current = false;
     }
     // Position cursor after prefix if input only contains prefix
-    if (inputValue === prefix) {
+    if (inputValueRef.current === prefix) {
       setTimeout(() => {
         e.target.setSelectionRange(prefix.length, prefix.length);
       }, 0);
@@ -197,21 +299,22 @@ export function HeroSearch({ onSearch }: HeroSearchProps) {
   // Handle input blur - restart animation if empty
   const handleBlur = () => {
     const prefix = 'I am a ';
-    const userInput = inputValue.substring(prefix.length);
+    const userInput = inputValueRef.current.substring(prefix.length);
     if (userInput.length === 0) {
       setIsAnimating(true);
+      isAnimatingRef.current = true;
       setCurrentCharIndex(0);
+      currentCharIndexRef.current = 0;
       setIsTyping(true);
+      isTypingRef.current = true;
       setCurrentTagIndex(0);
+      currentTagIndexRef.current = 0;
       setDisplayText(prefix);
       animationStartedRef.current = false;
       // Start animation after state updates
       setTimeout(() => {
-        if (animationRef.current) {
-          clearTimeout(animationRef.current);
-        }
-        runAnimationStep();
-      }, 0);
+        startAnimation();
+      }, 100);
     }
   };
 

@@ -288,10 +288,11 @@ export function GrantCard({ grant, isLocked = false, onLock, onUnlock }: GrantCa
             fontSize: '15px', 
             marginBottom: '8px', 
             color: 'var(--primary)',
-            backgroundColor: isLocked ? 'var(--secondary)' : 'transparent',
-            padding: isLocked ? '4px 8px' : '0',
-            borderRadius: isLocked ? '4px' : '0',
-            transition: 'background-color 0.2s ease, padding 0.2s ease, border-radius 0.2s ease',
+            textDecoration: isLocked ? 'underline' : 'none',
+            textDecorationColor: isLocked ? 'var(--secondary)' : 'transparent',
+            textDecorationThickness: isLocked ? '2px' : '0',
+            textUnderlineOffset: isLocked ? '2px' : '0',
+            transition: 'text-decoration 0.2s ease, text-decoration-color 0.2s ease',
             display: 'inline-block',
           }}>
             {grant.title}

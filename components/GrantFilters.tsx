@@ -182,7 +182,7 @@ export function GrantFilters({ onFilterChange }: GrantFiltersProps) {
                   borderRadius: '4px'
                 }}
               >
-                <span style={{ fontSize: '14px', lineHeight: '1', display: 'flex', alignItems: 'center' }}>{icon}</span>
+                <span className="material-icons" style={{ fontSize: '18px', lineHeight: '1', display: 'flex', alignItems: 'center' }}>{icon}</span>
                 <span style={{ flex: 1 }}>{category.name}</span>
               </button>
             );
