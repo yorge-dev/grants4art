@@ -57,19 +57,26 @@ function GrantTooltip({ description, eligibility, isVisible }: GrantTooltipProps
         visibility: isVisible ? 'visible' : 'hidden',
         scrollbarWidth: 'none',
         msOverflowStyle: 'none',
+        userSelect: 'none',
+        WebkitUserSelect: 'none',
+        MozUserSelect: 'none',
+        msUserSelect: 'none',
       }}
     >
       <div style={{ marginBottom: eligibility ? '12px' : '0' }}>
-        <p style={{ fontSize: '12px', color: 'var(--foreground)', lineHeight: '1.4', margin: 0, whiteSpace: 'pre-wrap' }}>
+        <h4 style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--primary)', marginBottom: '8px', userSelect: 'none', WebkitUserSelect: 'none', MozUserSelect: 'none', msUserSelect: 'none' }}>
+          Description
+        </h4>
+        <p style={{ fontSize: '12px', color: 'var(--foreground)', lineHeight: '1.4', margin: 0, whiteSpace: 'pre-wrap', userSelect: 'none', WebkitUserSelect: 'none', MozUserSelect: 'none', msUserSelect: 'none' }}>
           {description}
         </p>
       </div>
       {eligibility && (
         <div>
-          <h4 style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--primary)', marginBottom: '8px' }}>
+          <h4 style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--primary)', marginBottom: '8px', userSelect: 'none', WebkitUserSelect: 'none', MozUserSelect: 'none', msUserSelect: 'none' }}>
             Eligibility
           </h4>
-          <p style={{ fontSize: '12px', color: 'var(--foreground)', lineHeight: '1.4', margin: 0, whiteSpace: 'pre-wrap' }}>
+          <p style={{ fontSize: '12px', color: 'var(--foreground)', lineHeight: '1.4', margin: 0, whiteSpace: 'pre-wrap', userSelect: 'none', WebkitUserSelect: 'none', MozUserSelect: 'none', msUserSelect: 'none' }}>
             {eligibility}
           </p>
         </div>
@@ -345,13 +352,13 @@ export function GrantCard({ grant, isLocked = false, onLock, onUnlock }: GrantCa
               padding: '2px 6px',
               fontSize: '12px',
               fontWeight: 'bold',
-              color: 'var(--color-charcoal-brown-500)',
-              border: '1px solid var(--color-saddle-brown-600)',
+              color: 'var(--foreground)',
+              border: '1px solid var(--secondary)',
               borderRadius: '4px',
-              background: 'var(--color-khaki-beige-800)',
-              boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+              background: 'transparent',
               transition: 'all 0.3s ease',
               textAlign: 'right',
+              position: 'relative',
             }}>
               {displayAmount}
             </span>

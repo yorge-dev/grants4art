@@ -52,7 +52,7 @@ export function GrantStats({ totalGrants, totalAmount }: GrantStatsProps) {
             {formatAmount(totalAmount)}
           </div>
           <div style={{ fontSize: '12px', color: 'var(--foreground)', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-            Total Award Amount
+            Total Funding Amount
           </div>
         </div>
       </div>

@@ -150,8 +150,36 @@ export function GrantFilters({ onFilterChange }: GrantFiltersProps) {
 
       {/* Category Toggle Buttons */}
       <div style={{ marginBottom: '24px' }}>
-        <label className="block compact-mb" style={{ fontSize: '11px', fontWeight: 'bold', color: 'var(--foreground)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+        <label className="block compact-mb" style={{ fontSize: '11px', fontWeight: 'bold', color: 'var(--foreground)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: '6px' }}>
           Funding Source
+          {selectedCategories.length > 0 && (
+            <a
+              onClick={(e) => {
+                e.preventDefault();
+                handleClearFilters();
+              }}
+              href="#"
+              style={{
+                fontSize: '9px',
+                color: 'var(--foreground)',
+                opacity: 0.6,
+                textDecoration: 'none',
+                fontWeight: 'normal',
+                textTransform: 'none',
+                letterSpacing: 'normal',
+                cursor: 'pointer',
+                transition: 'opacity 0.15s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.opacity = '0.8';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.opacity = '0.6';
+              }}
+            >
+              (clear all)
+            </a>
+          )}
         </label>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
           {GRANT_CATEGORIES.map((category) => {
@@ -189,20 +217,6 @@ export function GrantFilters({ onFilterChange }: GrantFiltersProps) {
           })}
         </div>
       </div>
-
-      {/* Clear Button */}
-      <button
-        onClick={handleClearFilters}
-        className="aol-button-secondary"
-        style={{ 
-          width: '100%', 
-          fontSize: '11px', 
-          padding: '6px 10px',
-          marginTop: '4px'
-        }}
-      >
-        Clear All
-      </button>
     </div>
   );
 }
