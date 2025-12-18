@@ -207,19 +207,85 @@ body {
   transition: background-color 0.3s ease, color 0.3s ease;
   min-height: 100vh;
   position: relative;
-  cursor: url('/cursor.svg') 3 3, auto;
+  cursor: url('/cursor-light.svg') 3 3, auto;
 }
 
 * {
-  cursor: url('/cursor.svg') 3 3, auto;
+  cursor: url('/cursor-light.svg') 3 3, auto;
 }
 
 a, button, input[type="button"], input[type="submit"], .aol-button, .aol-button-secondary {
-  cursor: url('/cursor.svg') 3 3, pointer !important;
+  cursor: url('/cursor-light.svg') 3 3, pointer !important;
 }
 
 input[type="text"], input[type="search"], textarea, select {
-  cursor: url('/cursor.svg') 3 3, text;
+  cursor: url('/cursor-light.svg') 3 3, text;
+}
+
+/* Grey theme cursor */
+[data-theme='grey'] body,
+[data-theme='grey'] * {
+  cursor: url('/cursor-grey.svg') 3 3, auto;
+}
+
+[data-theme='grey'] a,
+[data-theme='grey'] button,
+[data-theme='grey'] input[type="button"],
+[data-theme='grey'] input[type="submit"],
+[data-theme='grey'] .aol-button,
+[data-theme='grey'] .aol-button-secondary {
+  cursor: url('/cursor-grey.svg') 3 3, pointer !important;
+}
+
+[data-theme='grey'] input[type="text"],
+[data-theme='grey'] input[type="search"],
+[data-theme='grey'] textarea,
+[data-theme='grey'] select {
+  cursor: url('/cursor-grey.svg') 3 3, text;
+}
+
+/* Grey inverted theme cursor */
+[data-theme='grey-inverted'] body,
+[data-theme='grey-inverted'] * {
+  cursor: url('/cursor-grey-inverted.svg') 3 3, auto;
+}
+
+[data-theme='grey-inverted'] a,
+[data-theme='grey-inverted'] button,
+[data-theme='grey-inverted'] input[type="button"],
+[data-theme='grey-inverted'] input[type="submit"],
+[data-theme='grey-inverted'] .aol-button,
+[data-theme='grey-inverted'] .aol-button-secondary {
+  cursor: url('/cursor-grey-inverted.svg') 3 3, pointer !important;
+}
+
+[data-theme='grey-inverted'] input[type="text"],
+[data-theme='grey-inverted'] input[type="search"],
+[data-theme='grey-inverted'] textarea,
+[data-theme='grey-inverted'] select {
+  cursor: url('/cursor-grey-inverted.svg') 3 3, text;
+}
+
+/* Dark theme cursor */
+[data-theme='dark'] body,
+[data-theme='dark'] * {
+  cursor: url('/cursor-dark.svg') 3 3, auto;
+}
+
+[data-theme='dark'] a,
+[data-theme='dark'] button,
+[data-theme='dark'] input[type="button"],
+[data-theme='dark'] input[type="submit"],
+[data-theme='dark'] .aol-button,
+[data-theme='dark'] .aol-button-secondary {
+  cursor: url('/cursor-dark.svg') 3 3, pointer !important;
+}
+
+[data-theme='dark'] input[type="text"],
+[data-theme='dark'] input[type="search"],
+[data-theme='dark'] textarea,
+[data-theme='dark'] select {
+  cursor: url('/cursor-dark.svg') 3 3, text;
 }
 
 body::before {
