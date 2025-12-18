@@ -45,16 +45,18 @@ export function HeroSearch({ onSearch }: HeroSearchProps) {
 
   // Animation step function using refs to avoid stale closures
   const runAnimationStep = useCallback(() => {
+    // Clear any existing timeout first
+    if (animationRef.current) {
+      clearTimeout(animationRef.current);
+      animationRef.current = null;
+    }
+
     const prefix = 'I am a ';
     const currentInput = inputValueRef.current;
     const userInput = currentInput.substring(prefix.length);
     
     // Stop animation if conditions aren't met
     if (!isAnimatingRef.current || tagsRef.current.length === 0 || userInput.length > 0) {
-      if (animationRef.current) {
-        clearTimeout(animationRef.current);
-        animationRef.current = null;
-      }
       animationStartedRef.current = false;
       return;
     }
@@ -88,11 +90,16 @@ export function HeroSearch({ onSearch }: HeroSearchProps) {
       if (currentCharIndexRef.current < fullTagText.length) {
         const nextCharIndex = currentCharIndexRef.current + 1;
         const newDisplayText = baseText + fullTagText.substring(0, nextCharIndex);
-        setDisplayText(newDisplayText);
-        displayTextRef.current = newDisplayText;
-        setCurrentCharIndex(nextCharIndex);
-        currentCharIndexRef.current = nextCharIndex;
         
+        // Update refs first, then state
+        currentCharIndexRef.current = nextCharIndex;
+        displayTextRef.current = newDisplayText;
+        
+        // Update state - React will batch these
+        setDisplayText(newDisplayText);
+        setCurrentCharIndex(nextCharIndex);
+        
+        // Schedule next step
         animationRef.current = setTimeout(() => {
           runAnimationStep();
         }, 100); // 100ms per character
@@ -109,26 +116,36 @@ export function HeroSearch({ onSearch }: HeroSearchProps) {
       if (currentCharIndexRef.current > 0) {
         const nextCharIndex = currentCharIndexRef.current - 1;
         const newDisplayText = baseText + fullTagText.substring(0, nextCharIndex);
-        setDisplayText(newDisplayText);
-        displayTextRef.current = newDisplayText;
-        setCurrentCharIndex(nextCharIndex);
-        currentCharIndexRef.current = nextCharIndex;
         
+        // Update refs first, then state
+        currentCharIndexRef.current = nextCharIndex;
+        displayTextRef.current = newDisplayText;
+        
+        // Update state
+        setDisplayText(newDisplayText);
+        setCurrentCharIndex(nextCharIndex);
+        
+        // Schedule next step
         animationRef.current = setTimeout(() => {
           runAnimationStep();
         }, 50); // 50ms per character (faster deletion)
       } else {
         // Finished deleting, move to next tag
         const nextTagIndex = (currentTagIndexRef.current + 1) % tagsRef.current.length;
-        setIsTyping(true);
-        isTypingRef.current = true;
-        setCurrentTagIndex(nextTagIndex);
+        
+        // Update refs first
         currentTagIndexRef.current = nextTagIndex;
-        setCurrentCharIndex(0);
         currentCharIndexRef.current = 0;
-        setDisplayText(baseText);
+        isTypingRef.current = true;
         displayTextRef.current = baseText;
         
+        // Update state
+        setIsTyping(true);
+        setCurrentTagIndex(nextTagIndex);
+        setCurrentCharIndex(0);
+        setDisplayText(baseText);
+        
+        // Schedule next step
         animationRef.current = setTimeout(() => {
           runAnimationStep();
         }, 300); // Small delay before starting next tag
@@ -144,7 +161,7 @@ export function HeroSearch({ onSearch }: HeroSearchProps) {
       animationRef.current = null;
     }
     
-    // Check conditions
+    // Check conditions - use current ref values
     if (!isAnimatingRef.current || 
         tagsRef.current.length === 0 || 
         inputValueRef.current !== 'I am a ') {
@@ -157,22 +174,27 @@ export function HeroSearch({ onSearch }: HeroSearchProps) {
       return;
     }
     
-    // Initialize animation state
-    animationStartedRef.current = true;
-    setCurrentTagIndex(0);
-    currentTagIndexRef.current = 0;
-    setCurrentCharIndex(0);
-    currentCharIndexRef.current = 0;
-    setIsTyping(true);
-    isTypingRef.current = true;
+    // Initialize animation state - update refs first
     const initialText = 'I am a ';
-    setDisplayText(initialText);
+    currentTagIndexRef.current = 0;
+    currentCharIndexRef.current = 0;
+    isTypingRef.current = true;
     displayTextRef.current = initialText;
+    animationStartedRef.current = true;
+    
+    // Then update state
+    setCurrentTagIndex(0);
+    setCurrentCharIndex(0);
+    setIsTyping(true);
+    setDisplayText(initialText);
     
     // Start the animation immediately - runAnimationStep uses refs so it will work
     // Use setTimeout to avoid calling during render
     setTimeout(() => {
-      runAnimationStep();
+      // Double-check conditions before starting
+      if (isAnimatingRef.current && tagsRef.current.length > 0 && inputValueRef.current === 'I am a ') {
+        runAnimationStep();
+      }
     }, 0);
   }, [runAnimationStep]);
 
@@ -209,15 +231,20 @@ export function HeroSearch({ onSearch }: HeroSearchProps) {
 
   // Check if we should start animation when state changes
   // This handles cases where tags are loaded but animation hasn't started
+  // Only check this if animation is not currently running
   if (isAnimating && tags.length > 0 && inputValue === 'I am a ' && !animationStartedRef.current && !animationRef.current && !pendingStartRef.current) {
     pendingStartRef.current = true;
     setTimeout(() => {
       pendingStartRef.current = false;
-      startAnimation();
+      // Double-check conditions before starting
+      if (isAnimatingRef.current && tagsRef.current.length > 0 && inputValueRef.current === 'I am a ' && !animationStartedRef.current) {
+        startAnimation();
+      }
     }, 0);
   }
   
-  if (!isAnimating) {
+  // Only stop animation if isAnimating state is false AND animation is actually running
+  if (!isAnimating && animationStartedRef.current) {
     animationStartedRef.current = false;
     if (animationRef.current) {
       clearTimeout(animationRef.current);

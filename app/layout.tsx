@@ -24,8 +24,8 @@ const exo = Exo({
 });
 
 export const metadata: Metadata = {
-  title: "Texas Art Grants - Funding for Designers & Artists",
-  description: "Discover grant opportunities for designers and artists across Texas",
+  title: "Grants 4 Art - Funding for Artistic Endeavors",
+  description: "Discover grant opportunities for artistic endeavors across the nation",
 };
 
 export default function RootLayout({
