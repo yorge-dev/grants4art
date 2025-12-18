@@ -31,6 +31,7 @@ export function HeroSearch({ onSearch }: HeroSearchProps) {
   const currentCharIndexRef = useRef(currentCharIndex);
   const isTypingRef = useRef(isTyping);
   const inputValueRef = useRef(inputValue);
+  const displayTextRef = useRef(displayText);
   const pendingStartRef = useRef(false);
 
   // Keep refs in sync with state
@@ -40,6 +41,7 @@ export function HeroSearch({ onSearch }: HeroSearchProps) {
   currentCharIndexRef.current = currentCharIndex;
   isTypingRef.current = isTyping;
   inputValueRef.current = inputValue;
+  displayTextRef.current = displayText;
 
   // Animation step function using refs to avoid stale closures
   const runAnimationStep = useCallback(() => {
@@ -68,6 +70,7 @@ export function HeroSearch({ onSearch }: HeroSearchProps) {
         setIsTyping(true);
         isTypingRef.current = true;
         setDisplayText(prefix);
+        displayTextRef.current = prefix;
         animationRef.current = setTimeout(() => {
           runAnimationStep();
         }, 100);
@@ -86,6 +89,7 @@ export function HeroSearch({ onSearch }: HeroSearchProps) {
         const nextCharIndex = currentCharIndexRef.current + 1;
         const newDisplayText = baseText + fullTagText.substring(0, nextCharIndex);
         setDisplayText(newDisplayText);
+        displayTextRef.current = newDisplayText;
         setCurrentCharIndex(nextCharIndex);
         currentCharIndexRef.current = nextCharIndex;
         
@@ -106,6 +110,7 @@ export function HeroSearch({ onSearch }: HeroSearchProps) {
         const nextCharIndex = currentCharIndexRef.current - 1;
         const newDisplayText = baseText + fullTagText.substring(0, nextCharIndex);
         setDisplayText(newDisplayText);
+        displayTextRef.current = newDisplayText;
         setCurrentCharIndex(nextCharIndex);
         currentCharIndexRef.current = nextCharIndex;
         
@@ -122,6 +127,7 @@ export function HeroSearch({ onSearch }: HeroSearchProps) {
         setCurrentCharIndex(0);
         currentCharIndexRef.current = 0;
         setDisplayText(baseText);
+        displayTextRef.current = baseText;
         
         animationRef.current = setTimeout(() => {
           runAnimationStep();
@@ -159,7 +165,9 @@ export function HeroSearch({ onSearch }: HeroSearchProps) {
     currentCharIndexRef.current = 0;
     setIsTyping(true);
     isTypingRef.current = true;
-    setDisplayText('I am a ');
+    const initialText = 'I am a ';
+    setDisplayText(initialText);
+    displayTextRef.current = initialText;
     
     // Start the animation immediately - runAnimationStep uses refs so it will work
     // Use setTimeout to avoid calling during render
@@ -257,6 +265,7 @@ export function HeroSearch({ onSearch }: HeroSearchProps) {
       setCurrentTagIndex(0);
       currentTagIndexRef.current = 0;
       setDisplayText(prefix);
+      displayTextRef.current = prefix;
       animationStartedRef.current = false;
       // Start animation after state updates
       setTimeout(() => {
@@ -303,18 +312,19 @@ export function HeroSearch({ onSearch }: HeroSearchProps) {
     if (userInput.length === 0) {
       setIsAnimating(true);
       isAnimatingRef.current = true;
-      setCurrentCharIndex(0);
-      currentCharIndexRef.current = 0;
-      setIsTyping(true);
-      isTypingRef.current = true;
-      setCurrentTagIndex(0);
-      currentTagIndexRef.current = 0;
-      setDisplayText(prefix);
-      animationStartedRef.current = false;
-      // Start animation after state updates
-      setTimeout(() => {
-        startAnimation();
-      }, 100);
+        setCurrentCharIndex(0);
+        currentCharIndexRef.current = 0;
+        setIsTyping(true);
+        isTypingRef.current = true;
+        setCurrentTagIndex(0);
+        currentTagIndexRef.current = 0;
+        setDisplayText(prefix);
+        displayTextRef.current = prefix;
+        animationStartedRef.current = false;
+        // Start animation after state updates
+        setTimeout(() => {
+          startAnimation();
+        }, 100);
     }
   };
 
@@ -389,16 +399,14 @@ export function HeroSearch({ onSearch }: HeroSearchProps) {
               }}
             >
               <span style={{ color: 'var(--foreground)', fontWeight: 'normal' }}>I am a </span>
-              {displayText.substring('I am a '.length) && (
-                <span style={{ color: 'var(--accent)', fontWeight: 'bold' }}>
-                  {displayText.substring('I am a '.length)}
-                </span>
-              )}
+              <span style={{ color: 'var(--accent)', fontWeight: 'bold' }}>
+                {displayText.substring('I am a '.length)}
+              </span>
               <span className="hero-cursor" style={{ 
                 display: 'inline-block',
                 width: '2px',
                 height: '16px',
-                background: displayText.substring('I am a '.length) ? 'var(--accent)' : 'var(--foreground)',
+                background: displayText.substring('I am a '.length).length > 0 ? 'var(--accent)' : 'var(--foreground)',
                 marginLeft: '2px',
                 verticalAlign: 'middle',
               }} />
