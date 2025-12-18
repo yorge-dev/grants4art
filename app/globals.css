@@ -207,6 +207,19 @@ body {
   transition: background-color 0.3s ease, color 0.3s ease;
   min-height: 100vh;
   position: relative;
+  cursor: url('/cursor.svg') 3 3, auto;
+}
+
+* {
+  cursor: url('/cursor.svg') 3 3, auto;
+}
+
+a, button, input[type="button"], input[type="submit"], .aol-button, .aol-button-secondary {
+  cursor: url('/cursor.svg') 3 3, pointer !important;
+}
+
+input[type="text"], input[type="search"], textarea, select {
+  cursor: url('/cursor.svg') 3 3, text;
 }
 
 body::before {

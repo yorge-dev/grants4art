@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Exo:wght@400;500;600;700;800;900&display=swap');
+      .favicon-text {
+        font-family: 'Exo', sans-serif;
+        font-weight: 700;
+        font-size: 80px;
+        fill: #7f4f24;
+      }
+    </style>
+  </defs>
+  <text x="50" y="75" text-anchor="middle" class="favicon-text">#4</text>
+</svg>
