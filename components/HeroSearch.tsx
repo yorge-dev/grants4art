@@ -2,9 +2,10 @@
 
 import { useState, useRef, useCallback } from 'react';
 import { formatTagName } from '@/lib/tag-utils';
+import { GRANT_TAGS } from '@/lib/constants';
 
 interface Tag {
-  id: string;
+  id?: string;
   name: string;
   slug: string;
 }
@@ -187,26 +188,26 @@ export function HeroSearch({ onSearch }: HeroSearchProps) {
     }, 100);
   }, [runAnimationStep]);
 
-  // Fetch tags using ref callback pattern
+  // Load tags from constants using ref callback pattern
   const containerRefCallback = useCallback((node: HTMLDivElement | null) => {
     containerRef.current = node;
     if (node && !tagsLoadedRef.current) {
       tagsLoadedRef.current = true;
-      fetch('/api/tags')
-        .then(response => response.json())
-        .then(data => {
-          if (data.tags && data.tags.length > 0) {
-            setTags(data.tags);
-            stateRefs.current.tags = data.tags;
-            // Start animation when tags are loaded
-            setTimeout(() => {
-              startAnimation();
-            }, 200);
-          }
-        })
-        .catch(error => {
-          console.error('Error fetching tags:', error);
-        });
+      // Use GRANT_TAGS from constants instead of API
+      // This ensures all defined tags are available even if not yet in database
+      const tagsFromConstants: Tag[] = GRANT_TAGS.map(tag => ({
+        name: tag.name,
+        slug: tag.slug
+      }));
+      
+      if (tagsFromConstants.length > 0) {
+        setTags(tagsFromConstants);
+        stateRefs.current.tags = tagsFromConstants;
+        // Start animation when tags are loaded
+        setTimeout(() => {
+          startAnimation();
+        }, 200);
+      }
     }
   }, [startAnimation]);
 
