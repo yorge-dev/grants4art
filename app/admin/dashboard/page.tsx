@@ -8,6 +8,59 @@ import { AdminGrantSubmissionForm } from '@/components/AdminGrantSubmissionForm'
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { formatTagName } from '@/lib/tag-utils';
 
+interface GrantTooltipProps {
+  description: string;
+  eligibility?: string | null;
+  isVisible: boolean;
+}
+
+function GrantTooltip({ description, eligibility, isVisible }: GrantTooltipProps) {
+  return (
+    <div
+      className="grant-tooltip"
+      style={{
+        marginTop: '12px',
+        padding: isVisible ? '16px' : '0 16px',
+        background: 'var(--text-field-bg)',
+        border: '2px inset',
+        borderColor: isVisible ? 'var(--secondary)' : 'transparent',
+        borderRadius: '8px',
+        opacity: isVisible ? 1 : 0,
+        maxHeight: isVisible ? '600px' : '0',
+        overflowY: isVisible ? 'auto' : 'hidden',
+        overflowX: 'hidden',
+        transition: 'opacity 0.3s ease, max-height 0.3s ease, padding 0.3s ease, border-color 0.3s ease',
+        visibility: isVisible ? 'visible' : 'hidden',
+        scrollbarWidth: 'none',
+        msOverflowStyle: 'none',
+        userSelect: 'none',
+        WebkitUserSelect: 'none',
+        MozUserSelect: 'none',
+        msUserSelect: 'none',
+      }}
+    >
+      <div style={{ marginBottom: eligibility ? '12px' : '0' }}>
+        <h4 style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--primary)', marginBottom: '8px', userSelect: 'none', WebkitUserSelect: 'none', MozUserSelect: 'none', msUserSelect: 'none' }}>
+          Description
+        </h4>
+        <p style={{ fontSize: '12px', color: 'var(--foreground)', lineHeight: '1.4', margin: 0, whiteSpace: 'pre-wrap', userSelect: 'none', WebkitUserSelect: 'none', MozUserSelect: 'none', msUserSelect: 'none' }}>
+          {description}
+        </p>
+      </div>
+      {eligibility && (
+        <div>
+          <h4 style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--primary)', marginBottom: '8px', userSelect: 'none', WebkitUserSelect: 'none', MozUserSelect: 'none', msUserSelect: 'none' }}>
+            Eligibility
+          </h4>
+          <p style={{ fontSize: '12px', color: 'var(--foreground)', lineHeight: '1.4', margin: 0, whiteSpace: 'pre-wrap', userSelect: 'none', WebkitUserSelect: 'none', MozUserSelect: 'none', msUserSelect: 'none' }}>
+            {eligibility}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 interface Grant {
   id: string;
   title: string;
@@ -79,6 +132,203 @@ const formatSafeDate = (dateValue: Date | string | null | undefined, formatStrin
   return isValid(date) ? format(date, formatString) : 'Invalid Date';
 };
 
+const formatGrantAmount = (grant: ScrapeJob['grants'][0]) => {
+  if (grant.amountMin !== null && grant.amountMin !== undefined && grant.amountMax !== null && grant.amountMax !== undefined) {
+    if (grant.amountMin === grant.amountMax) {
+      return `$${grant.amountMin.toLocaleString()}`;
+    }
+    return `$${grant.amountMin.toLocaleString()} - $${grant.amountMax.toLocaleString()}`;
+  } else if (grant.amountMax !== null && grant.amountMax !== undefined) {
+    return `Up to $${grant.amountMax.toLocaleString()}`;
+  } else if (grant.amountMin !== null && grant.amountMin !== undefined) {
+    return `From $${grant.amountMin.toLocaleString()}`;
+  } else if (grant.amount) {
+    return grant.amount;
+  }
+  return null;
+};
+
+interface GrantPreviewCardProps {
+  grant: ScrapeJob['grants'][0];
+  router: ReturnType<typeof useRouter>;
+}
+
+function GrantPreviewCard({ grant, router }: GrantPreviewCardProps) {
+  const [showTooltip, setShowTooltip] = useState(false);
+  const hideTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const deadline = grant.deadline ? new Date(grant.deadline) : null;
+  const isExpired = deadline && deadline < new Date();
+  const displayAmount = formatGrantAmount(grant);
+
+  const handleMouseEnter = () => {
+    // Clear any pending hide timeout
+    if (hideTimeoutRef.current) {
+      clearTimeout(hideTimeoutRef.current);
+      hideTimeoutRef.current = null;
+    }
+    setShowTooltip(true);
+  };
+
+  const handleMouseLeave = () => {
+    // Add a small delay before hiding to prevent flickering when moving between cards
+    if (hideTimeoutRef.current) {
+      clearTimeout(hideTimeoutRef.current);
+    }
+    hideTimeoutRef.current = setTimeout(() => {
+      setShowTooltip(false);
+      hideTimeoutRef.current = null;
+    }, 150); // 150ms delay
+  };
+
+  const tooltipVisible = showTooltip;
+
+  return (
+    <div
+      className="aol-box block grant-card"
+      onClick={() => router.push(`/admin/grants/${grant.id}`)}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      style={{
+        textDecoration: 'none',
+        color: 'var(--foreground)',
+        padding: '16px',
+        marginBottom: '0',
+        display: 'block',
+        position: 'relative',
+        cursor: 'pointer',
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'start', justifyContent: 'space-between', gap: '12px', marginBottom: '12px', position: 'relative' }}>
+        <div style={{ flex: 1 }}>
+          <h3 style={{
+            fontSize: '13px',
+            marginBottom: '6px',
+            color: 'var(--primary)',
+            fontWeight: 'bold',
+            textDecoration: tooltipVisible ? 'underline' : 'none',
+            textDecorationColor: tooltipVisible ? 'var(--secondary)' : 'transparent',
+            textDecorationThickness: tooltipVisible ? '2px' : '0',
+            textUnderlineOffset: tooltipVisible ? '2px' : '0',
+            transition: 'text-decoration 0.2s ease, text-decoration-color 0.2s ease',
+            display: 'inline-block',
+          }}>
+            {grant.title}
+          </h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <p style={{ color: 'var(--foreground)', fontWeight: 'bold', margin: 0, fontSize: '11px' }}>
+              {grant.organization}
+            </p>
+            <div className="flex items-center gap-2" style={{ gap: '12px', fontSize: '10px', flexWrap: 'wrap' }}>
+              <span className="flex items-center gap-1" style={{ fontWeight: 'bold', color: 'var(--foreground)' }}>
+                <span className="material-icons" style={{ fontSize: '12px', verticalAlign: 'middle' }}>location_on</span> {grant.location}
+              </span>
+              {grant.applicationUrl && (
+                <span
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    window.open(grant.applicationUrl!, '_blank', 'noopener,noreferrer');
+                  }}
+                  className="flex items-center gap-1"
+                  style={{
+                    fontWeight: 'bold',
+                    color: 'var(--primary)',
+                    textDecoration: 'none',
+                    opacity: 0.8,
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    transition: 'opacity 0.2s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.opacity = '1';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.opacity = '0.8';
+                  }}
+                >
+                  <span className="material-icons" style={{ fontSize: '12px', verticalAlign: 'middle' }}>link</span> Apply
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+        <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px', textAlign: 'right' }}>
+          {displayAmount && (
+            <span style={{
+              display: 'inline-block',
+              padding: '2px 6px',
+              fontSize: '11px',
+              fontWeight: 'bold',
+              color: 'var(--foreground)',
+              border: '1px solid var(--secondary)',
+              borderRadius: '4px',
+              background: 'transparent',
+              textAlign: 'right',
+            }}>
+              {displayAmount}
+            </span>
+          )}
+          {deadline && (
+            <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px', fontWeight: 'bold', color: isExpired ? '#d32f2f' : 'var(--foreground)', fontSize: '10px', textAlign: 'right' }}>
+              <span className="material-icons" style={{ fontSize: '12px', verticalAlign: 'middle' }}>calendar_today</span> {isExpired ? 'Expired' : `Due in ${formatDistanceToNow(deadline)}`}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {grant.tags && grant.tags.length > 0 && (
+        <div className="flex flex-wrap gap-1" style={{ gap: '6px', marginBottom: '12px' }}>
+          {grant.tags.map((tagRelation) => (
+            <span
+              key={tagRelation.tag.slug}
+              style={{
+                padding: '1px 4px',
+                fontSize: '10px',
+                background: 'var(--color-camel-800)',
+                color: 'var(--color-charcoal-brown-500)',
+                border: '1px solid var(--secondary)',
+                borderRadius: '4px',
+                fontWeight: 'bold',
+              }}
+            >
+              {formatTagName(tagRelation.tag.name)}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {grant.description && (
+        <div
+          className="compact-mb grant-description"
+          style={{
+            fontSize: '11px',
+            color: 'var(--foreground)',
+            marginBottom: tooltipVisible ? '0' : '12px',
+            lineHeight: '1.3',
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            opacity: tooltipVisible ? 0 : 1,
+            maxHeight: tooltipVisible ? '0' : 'none',
+            transition: 'opacity 0.3s ease, max-height 0.3s ease, margin-bottom 0.3s ease',
+          }}
+        >
+          <p style={{ margin: 0 }}>
+            {grant.description}
+          </p>
+        </div>
+      )}
+
+      <GrantTooltip
+        description={grant.description}
+        eligibility={grant.eligibility || null}
+        isVisible={tooltipVisible}
+      />
+    </div>
+  );
+}
+
 export default function AdminDashboard() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -90,6 +340,47 @@ export default function AdminDashboard() {
     key: null,
     direction: 'asc',
   });
+
+  // Column Visibility State
+  const [showColumnSettings, setShowColumnSettings] = useState(false);
+  const columnSettingsRef = useRef<HTMLDivElement>(null);
+  
+  // Load column visibility from localStorage or use defaults
+  const getDefaultColumnVisibility = () => ({
+    title: true,
+    organization: true,
+    location: true,
+    amountMin: true,
+    amountMax: true,
+    deadline: true,
+    applicationUrl: true,
+    category: true,
+    tags: true,
+    createdAt: true,
+  });
+
+  const [columnVisibility, setColumnVisibility] = useState<Record<string, boolean>>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('grantTableColumnVisibility');
+      if (saved) {
+        try {
+          return { ...getDefaultColumnVisibility(), ...JSON.parse(saved) };
+        } catch {
+          return getDefaultColumnVisibility();
+        }
+      }
+    }
+    return getDefaultColumnVisibility();
+  });
+
+  // Save column visibility to localStorage
+  const updateColumnVisibility = (column: string, visible: boolean) => {
+    const newVisibility = { ...columnVisibility, [column]: visible };
+    setColumnVisibility(newVisibility);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('grantTableColumnVisibility', JSON.stringify(newVisibility));
+    }
+  };
 
   // Scraper State
   const [jobs, setJobs] = useState<ScrapeJob[]>([]);
@@ -276,22 +567,6 @@ export default function AdminDashboard() {
     return styles[status] || { bg: 'var(--inset-bg)', color: 'var(--foreground)', border: 'var(--muted)' };
   };
 
-  const formatGrantAmount = (grant: ScrapeJob['grants'][0]) => {
-    if (grant.amountMin !== null && grant.amountMin !== undefined && grant.amountMax !== null && grant.amountMax !== undefined) {
-      if (grant.amountMin === grant.amountMax) {
-        return `$${grant.amountMin.toLocaleString()}`;
-      }
-      return `$${grant.amountMin.toLocaleString()} - $${grant.amountMax.toLocaleString()}`;
-    } else if (grant.amountMax !== null && grant.amountMax !== undefined) {
-      return `Up to $${grant.amountMax.toLocaleString()}`;
-    } else if (grant.amountMin !== null && grant.amountMin !== undefined) {
-      return `From $${grant.amountMin.toLocaleString()}`;
-    } else if (grant.amount) {
-      return grant.amount;
-    }
-    return null;
-  };
-
   const SortableHeader = ({ label, sortKey }: { label: string; sortKey: keyof Grant }) => (
     <th
       className="compact-px compact-py"
@@ -375,27 +650,122 @@ export default function AdminDashboard() {
             </p>
           </div>
         ) : (
-          <div className="aol-box" style={{ overflow: 'auto', margin: '0 8px 32px 8px' }}>
+          <div className="aol-box" style={{ overflow: 'auto', margin: '0 8px 32px 8px', position: 'relative' }}>
+            {/* Backdrop for closing dropdown */}
+            {showColumnSettings && (
+              <div
+                onClick={() => setShowColumnSettings(false)}
+                style={{
+                  position: 'fixed',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  zIndex: 15,
+                  background: 'transparent',
+                }}
+              />
+            )}
+            
+            {/* Column Settings Button */}
+            <div style={{ position: 'absolute', top: '8px', right: '8px', zIndex: 20 }}>
+              <button
+                onClick={() => setShowColumnSettings(!showColumnSettings)}
+                className="aol-button-secondary"
+                style={{
+                  padding: '4px 8px',
+                  fontSize: '12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                }}
+                title="Column Settings"
+              >
+                <span className="material-icons" style={{ fontSize: '16px' }}>build</span>
+              </button>
+              
+              {/* Column Settings Dropdown */}
+              {showColumnSettings && (
+                <div
+                  ref={columnSettingsRef}
+                  className="aol-box-inset"
+                  onClick={(e) => e.stopPropagation()}
+                  style={{
+                    position: 'absolute',
+                    top: '100%',
+                    right: '0',
+                    marginTop: '4px',
+                    padding: '12px',
+                    minWidth: '200px',
+                    zIndex: 25,
+                    boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
+                  }}
+                >
+                  <div style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: 'var(--primary)' }}>
+                    Column Visibility
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    {[
+                      { key: 'title', label: 'Title' },
+                      { key: 'organization', label: 'Organization' },
+                      { key: 'location', label: 'Location' },
+                      { key: 'amountMin', label: 'Amount Min' },
+                      { key: 'amountMax', label: 'Amount Max' },
+                      { key: 'deadline', label: 'Deadline' },
+                      { key: 'applicationUrl', label: 'Application URL' },
+                      { key: 'category', label: 'Funding Source' },
+                      { key: 'tags', label: 'Tags' },
+                      { key: 'createdAt', label: 'Live Date' },
+                    ].map((col) => (
+                      <label
+                        key={col.key}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          fontSize: '11px',
+                          cursor: 'pointer',
+                          userSelect: 'none',
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={columnVisibility[col.key] ?? true}
+                          onChange={(e) => updateColumnVisibility(col.key, e.target.checked)}
+                          style={{ cursor: 'pointer' }}
+                        />
+                        <span>{col.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
             <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0', fontSize: '11px', borderRadius: '8px', overflow: 'hidden' }}>
               <thead>
                 <tr style={{ background: 'var(--inset-bg)' }}>
                   <th className="compact-px compact-py" style={{ padding: '4px 6px', textAlign: 'right', fontWeight: 'bold', color: 'var(--foreground)', borderBottom: '2px inset var(--border-color)', whiteSpace: 'nowrap' }}>
                     Actions
                   </th>
-                  <SortableHeader label="Title" sortKey="title" />
-                  <SortableHeader label="Organization" sortKey="organization" />
-                  <SortableHeader label="Location" sortKey="location" />
-                  <SortableHeader label="Amount Min" sortKey="amountMin" />
-                  <SortableHeader label="Amount Max" sortKey="amountMax" />
-                  <SortableHeader label="Deadline" sortKey="deadline" />
-                  <th className="compact-px compact-py" style={{ padding: '4px 6px', textAlign: 'left', fontWeight: 'bold', color: 'var(--foreground)', borderBottom: '2px inset var(--border-color)', whiteSpace: 'nowrap' }}>
-                    Application URL
-                  </th>
-                  <SortableHeader label="Funding Source" sortKey="category" />
-                  <th className="compact-px compact-py" style={{ padding: '4px 6px', textAlign: 'left', fontWeight: 'bold', color: 'var(--foreground)', borderBottom: '2px inset var(--border-color)', whiteSpace: 'nowrap' }}>
-                    Tags
-                  </th>
-                  <SortableHeader label="Live Date" sortKey="createdAt" />
+                  {columnVisibility.title && <SortableHeader label="Title" sortKey="title" />}
+                  {columnVisibility.organization && <SortableHeader label="Organization" sortKey="organization" />}
+                  {columnVisibility.location && <SortableHeader label="Location" sortKey="location" />}
+                  {columnVisibility.amountMin && <SortableHeader label="Amount Min" sortKey="amountMin" />}
+                  {columnVisibility.amountMax && <SortableHeader label="Amount Max" sortKey="amountMax" />}
+                  {columnVisibility.deadline && <SortableHeader label="Deadline" sortKey="deadline" />}
+                  {columnVisibility.applicationUrl && (
+                    <th className="compact-px compact-py" style={{ padding: '4px 6px', textAlign: 'left', fontWeight: 'bold', color: 'var(--foreground)', borderBottom: '2px inset var(--border-color)', whiteSpace: 'nowrap' }}>
+                      Application URL
+                    </th>
+                  )}
+                  {columnVisibility.category && <SortableHeader label="Funding Source" sortKey="category" />}
+                  {columnVisibility.tags && (
+                    <th className="compact-px compact-py" style={{ padding: '4px 6px', textAlign: 'left', fontWeight: 'bold', color: 'var(--foreground)', borderBottom: '2px inset var(--border-color)', whiteSpace: 'nowrap' }}>
+                      Tags
+                    </th>
+                  )}
+                  {columnVisibility.createdAt && <SortableHeader label="Live Date" sortKey="createdAt" />}
                 </tr>
               </thead>
               <tbody>
@@ -410,63 +780,83 @@ export default function AdminDashboard() {
                         Edit
                       </button>
                     </td>
-                    <td className="compact-px compact-py" style={{ padding: '4px 6px', borderBottom: '1px solid var(--border-color)', maxWidth: '200px' }}>
-                      <div style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--foreground)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{grant.title}</div>
-                    </td>
-                    <td className="compact-px compact-py" style={{ padding: '4px 6px', borderBottom: '1px solid var(--border-color)', maxWidth: '150px' }}>
-                      <div style={{ fontSize: '11px', color: 'var(--foreground)' }}>{grant.organization}</div>
-                    </td>
-                    <td className="compact-px compact-py" style={{ padding: '4px 6px', borderBottom: '1px solid var(--border-color)', fontSize: '11px', color: 'var(--foreground)' }}>
-                      {grant.location}
-                    </td>
-                    <td className="compact-px compact-py" style={{ padding: '4px 6px', borderBottom: '1px solid var(--border-color)', fontSize: '11px', color: 'var(--foreground)' }}>
-                      {grant.amountMin ? `$${grant.amountMin.toLocaleString()}` : '-'}
-                    </td>
-                    <td className="compact-px compact-py" style={{ padding: '4px 6px', borderBottom: '1px solid var(--border-color)', fontSize: '11px', color: 'var(--foreground)' }}>
-                      {grant.amountMax ? `$${grant.amountMax.toLocaleString()}` : '-'}
-                    </td>
-                    <td className="compact-px compact-py" style={{ padding: '4px 6px', borderBottom: '1px solid var(--border-color)', fontSize: '11px', color: 'var(--foreground)' }}>
-                      {grant.deadline ? formatSafeDate(grant.deadline, 'MM/dd/yyyy') : '-'}
-                    </td>
-                    <td className="compact-px compact-py" style={{ padding: '4px 6px', borderBottom: '1px solid var(--border-color)', fontSize: '10px', color: 'var(--primary)', maxWidth: '200px' }}>
-                      {grant.applicationUrl ? (
-                        <a href={grant.applicationUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary)', textDecoration: 'none', wordBreak: 'break-all' }}>
-                          {grant.applicationUrl.length > 30 ? `${grant.applicationUrl.substring(0, 30)}...` : grant.applicationUrl}
-                        </a>
-                      ) : '-'}
-                    </td>
-                    <td className="compact-px compact-py" style={{ padding: '4px 6px', borderBottom: '1px solid var(--border-color)', fontSize: '10px', color: 'var(--foreground)' }}>
-                      {grant.category || '-'}
-                    </td>
-                    <td className="compact-px compact-py" style={{ padding: '4px 6px', borderBottom: '1px solid var(--border-color)', fontSize: '10px', maxWidth: '150px' }}>
-                      {grant.tags && grant.tags.length > 0 ? (
-                        <div className="flex flex-wrap gap-1" style={{ gap: '2px' }}>
-                          {grant.tags.slice(0, 3).map((tagRelation, idx) => (
-                            <span
-                              key={idx}
-                              style={{
-                                padding: '1px 4px',
-                                fontSize: '9px',
-                                background: 'var(--inset-bg)',
-                                color: 'var(--foreground)',
-                                border: '1px solid var(--border-color)',
-                                borderRadius: '3px',
-                                fontWeight: 'bold',
-                                display: 'inline-block'
-                              }}
-                            >
-                              {tagRelation.tag.name}
-                            </span>
-                          ))}
-                          {grant.tags.length > 3 && (
-                            <span style={{ fontSize: '9px', color: 'var(--foreground)' }}>+{grant.tags.length - 3}</span>
-                          )}
-                        </div>
-                      ) : '-'}
-                    </td>
-                    <td className="compact-px compact-py" style={{ padding: '4px 6px', borderBottom: '1px solid var(--border-color)', fontSize: '10px', color: 'var(--foreground)', whiteSpace: 'nowrap' }}>
-                      {formatSafeDate(grant.createdAt, 'MM/dd/yyyy')}
-                    </td>
+                    {columnVisibility.title && (
+                      <td className="compact-px compact-py" style={{ padding: '4px 6px', borderBottom: '1px solid var(--border-color)', maxWidth: '200px' }}>
+                        <div style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--foreground)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{grant.title}</div>
+                      </td>
+                    )}
+                    {columnVisibility.organization && (
+                      <td className="compact-px compact-py" style={{ padding: '4px 6px', borderBottom: '1px solid var(--border-color)', maxWidth: '150px' }}>
+                        <div style={{ fontSize: '11px', color: 'var(--foreground)' }}>{grant.organization}</div>
+                      </td>
+                    )}
+                    {columnVisibility.location && (
+                      <td className="compact-px compact-py" style={{ padding: '4px 6px', borderBottom: '1px solid var(--border-color)', fontSize: '11px', color: 'var(--foreground)' }}>
+                        {grant.location}
+                      </td>
+                    )}
+                    {columnVisibility.amountMin && (
+                      <td className="compact-px compact-py" style={{ padding: '4px 6px', borderBottom: '1px solid var(--border-color)', fontSize: '11px', color: 'var(--foreground)' }}>
+                        {grant.amountMin ? `$${grant.amountMin.toLocaleString()}` : '-'}
+                      </td>
+                    )}
+                    {columnVisibility.amountMax && (
+                      <td className="compact-px compact-py" style={{ padding: '4px 6px', borderBottom: '1px solid var(--border-color)', fontSize: '11px', color: 'var(--foreground)' }}>
+                        {grant.amountMax ? `$${grant.amountMax.toLocaleString()}` : '-'}
+                      </td>
+                    )}
+                    {columnVisibility.deadline && (
+                      <td className="compact-px compact-py" style={{ padding: '4px 6px', borderBottom: '1px solid var(--border-color)', fontSize: '11px', color: 'var(--foreground)' }}>
+                        {grant.deadline ? formatSafeDate(grant.deadline, 'MM/dd/yyyy') : '-'}
+                      </td>
+                    )}
+                    {columnVisibility.applicationUrl && (
+                      <td className="compact-px compact-py" style={{ padding: '4px 6px', borderBottom: '1px solid var(--border-color)', fontSize: '10px', color: 'var(--primary)', maxWidth: '200px' }}>
+                        {grant.applicationUrl ? (
+                          <a href={grant.applicationUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary)', textDecoration: 'none', wordBreak: 'break-all' }}>
+                            {grant.applicationUrl.length > 30 ? `${grant.applicationUrl.substring(0, 30)}...` : grant.applicationUrl}
+                          </a>
+                        ) : '-'}
+                      </td>
+                    )}
+                    {columnVisibility.category && (
+                      <td className="compact-px compact-py" style={{ padding: '4px 6px', borderBottom: '1px solid var(--border-color)', fontSize: '10px', color: 'var(--foreground)' }}>
+                        {grant.category || '-'}
+                      </td>
+                    )}
+                    {columnVisibility.tags && (
+                      <td className="compact-px compact-py" style={{ padding: '4px 6px', borderBottom: '1px solid var(--border-color)', fontSize: '10px', maxWidth: '150px' }}>
+                        {grant.tags && grant.tags.length > 0 ? (
+                          <div className="flex flex-wrap gap-1" style={{ gap: '2px' }}>
+                            {grant.tags.slice(0, 3).map((tagRelation, idx) => (
+                              <span
+                                key={idx}
+                                style={{
+                                  padding: '1px 4px',
+                                  fontSize: '9px',
+                                  background: 'var(--inset-bg)',
+                                  color: 'var(--foreground)',
+                                  border: '1px solid var(--border-color)',
+                                  borderRadius: '3px',
+                                  fontWeight: 'bold',
+                                  display: 'inline-block'
+                                }}
+                              >
+                                {tagRelation.tag.name}
+                              </span>
+                            ))}
+                            {grant.tags.length > 3 && (
+                              <span style={{ fontSize: '9px', color: 'var(--foreground)' }}>+{grant.tags.length - 3}</span>
+                            )}
+                          </div>
+                        ) : '-'}
+                      </td>
+                    )}
+                    {columnVisibility.createdAt && (
+                      <td className="compact-px compact-py" style={{ padding: '4px 6px', borderBottom: '1px solid var(--border-color)', fontSize: '10px', color: 'var(--foreground)', whiteSpace: 'nowrap' }}>
+                        {formatSafeDate(grant.createdAt, 'MM/dd/yyyy')}
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -482,14 +872,32 @@ export default function AdminDashboard() {
           
           {/* Left Column: Sources */}
           <div style={{ minWidth: '0' }}>
-            <div className="aol-box" style={{ margin: '0 8px 16px 8px', padding: '16px' }}>
+            <div className="aol-box" style={{ margin: '0 8px 16px 8px', padding: '16px', overflow: 'hidden' }}>
               <h2 className="aol-heading compact-mb" style={{ fontSize: '16px', marginBottom: '8px' }}>
                 Grant Sources
               </h2>
               
               {/* Add Source Form */}
+              <style>{`
+                @media (max-width: 640px) {
+                  .source-inputs-container {
+                    flex-direction: column !important;
+                  }
+                  .source-inputs-container input {
+                    width: 100% !important;
+                    flex: 1 1 100% !important;
+                  }
+                }
+              `}</style>
               <form onSubmit={handleAddSource} style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px', paddingBottom: '16px', borderBottom: '1px solid var(--border-color)' }}>
-                <div style={{ display: 'flex', gap: '8px' }}>
+                <div className="source-inputs-container" style={{ 
+                  display: 'flex', 
+                  flexDirection: 'row',
+                  gap: '8px',
+                  flexWrap: 'wrap',
+                  width: '100%',
+                  boxSizing: 'border-box'
+                }}>
                   <input
                     type="text"
                     value={newSourceName}
@@ -497,7 +905,12 @@ export default function AdminDashboard() {
                     placeholder="Source Name"
                     required
                     className="aol-input"
-                    style={{ flex: 1 }}
+                    style={{ 
+                      flex: '1 1 150px',
+                      minWidth: '0',
+                      width: '100%',
+                      boxSizing: 'border-box'
+                    }}
                   />
                   <input
                     type="url"
@@ -506,7 +919,12 @@ export default function AdminDashboard() {
                     placeholder="URL"
                     required
                     className="aol-input"
-                    style={{ flex: 2 }}
+                    style={{ 
+                      flex: '2 1 200px',
+                      minWidth: '0',
+                      width: '100%',
+                      boxSizing: 'border-box'
+                    }}
                   />
                 </div>
                 <button
@@ -621,130 +1039,9 @@ export default function AdminDashboard() {
                           )}
                           {job.grants && job.grants.length > 0 && (
                             <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                              {job.grants.map((grant) => {
-                                const deadline = grant.deadline ? new Date(grant.deadline) : null;
-                                const isExpired = deadline && deadline < new Date();
-                                const displayAmount = formatGrantAmount(grant);
-                                
-                                return (
-                                  <div
-                                    key={grant.id}
-                                    className="aol-box"
-                                    onClick={() => router.push(`/admin/grants/${grant.id}`)}
-                                    style={{
-                                      padding: '12px',
-                                      cursor: 'pointer',
-                                      transition: 'all 0.2s ease',
-                                    }}
-                                    onMouseEnter={(e) => {
-                                      e.currentTarget.style.borderColor = 'var(--primary)';
-                                    }}
-                                    onMouseLeave={(e) => {
-                                      e.currentTarget.style.borderColor = 'var(--border-color)';
-                                    }}
-                                  >
-                                    <div style={{ display: 'flex', alignItems: 'start', justifyContent: 'space-between', gap: '12px', marginBottom: '8px' }}>
-                                      <div style={{ flex: 1 }}>
-                                        <h3 style={{
-                                          fontSize: '13px',
-                                          marginBottom: '6px',
-                                          color: 'var(--primary)',
-                                          fontWeight: 'bold',
-                                        }}>
-                                          {grant.title}
-                                        </h3>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                          <p style={{ color: 'var(--foreground)', fontWeight: 'bold', margin: 0, fontSize: '11px' }}>
-                                            {grant.organization}
-                                          </p>
-                                          <div className="flex items-center gap-2" style={{ gap: '12px', fontSize: '10px', flexWrap: 'wrap' }}>
-                                            <span className="flex items-center gap-1" style={{ fontWeight: 'bold', color: 'var(--foreground)' }}>
-                                              <span className="material-icons" style={{ fontSize: '12px', verticalAlign: 'middle' }}>location_on</span> {grant.location}
-                                            </span>
-                                            {grant.applicationUrl && (
-                                              <span
-                                                onClick={(e) => {
-                                                  e.stopPropagation();
-                                                  window.open(grant.applicationUrl!, '_blank', 'noopener,noreferrer');
-                                                }}
-                                                className="flex items-center gap-1"
-                                                style={{
-                                                  fontWeight: 'bold',
-                                                  color: 'var(--primary)',
-                                                  textDecoration: 'none',
-                                                  opacity: 0.8,
-                                                  cursor: 'pointer',
-                                                  whiteSpace: 'nowrap',
-                                                }}
-                                              >
-                                                <span className="material-icons" style={{ fontSize: '12px', verticalAlign: 'middle' }}>link</span> Apply
-                                              </span>
-                                            )}
-                                          </div>
-                                        </div>
-                                      </div>
-                                      <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px', textAlign: 'right' }}>
-                                        {displayAmount && (
-                                          <span style={{
-                                            display: 'inline-block',
-                                            padding: '2px 6px',
-                                            fontSize: '11px',
-                                            fontWeight: 'bold',
-                                            color: 'var(--foreground)',
-                                            border: '1px solid var(--secondary)',
-                                            borderRadius: '4px',
-                                            background: 'transparent',
-                                            textAlign: 'right',
-                                          }}>
-                                            {displayAmount}
-                                          </span>
-                                        )}
-                                        {deadline && (
-                                          <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px', fontWeight: 'bold', color: isExpired ? '#d32f2f' : 'var(--foreground)', fontSize: '10px', textAlign: 'right' }}>
-                                            <span className="material-icons" style={{ fontSize: '12px', verticalAlign: 'middle' }}>calendar_today</span> {isExpired ? 'Expired' : `Due in ${formatDistanceToNow(deadline)}`}
-                                          </span>
-                                        )}
-                                      </div>
-                                    </div>
-
-                                    {grant.tags && grant.tags.length > 0 && (
-                                      <div className="flex flex-wrap gap-1" style={{ gap: '6px', marginBottom: '8px' }}>
-                                        {grant.tags.map((tagRelation) => (
-                                          <span
-                                            key={tagRelation.tag.slug}
-                                            style={{
-                                              padding: '1px 4px',
-                                              fontSize: '10px',
-                                              background: 'var(--color-camel-800)',
-                                              color: 'var(--color-charcoal-brown-500)',
-                                              border: '1px solid var(--secondary)',
-                                              borderRadius: '4px',
-                                              fontWeight: 'bold',
-                                            }}
-                                          >
-                                            {formatTagName(tagRelation.tag.name)}
-                                          </span>
-                                        ))}
-                                      </div>
-                                    )}
-
-                                    {grant.description && (
-                                      <div style={{
-                                        fontSize: '11px',
-                                        color: 'var(--foreground)',
-                                        lineHeight: '1.3',
-                                        display: '-webkit-box',
-                                        WebkitLineClamp: 2,
-                                        WebkitBoxOrient: 'vertical',
-                                        overflow: 'hidden',
-                                        textOverflow: 'ellipsis',
-                                      }}>
-                                        {grant.description}
-                                      </div>
-                                    )}
-                                  </div>
-                                );
-                              })}
+                              {job.grants.map((grant) => (
+                                <GrantPreviewCard key={grant.id} grant={grant} router={router} />
+                              ))}
                             </div>
                           )}
                         </div>
