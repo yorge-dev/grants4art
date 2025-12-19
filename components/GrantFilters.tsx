@@ -124,7 +124,7 @@ export function GrantFilters({ onFilterChange }: GrantFiltersProps) {
 
   return (
     <div className="aol-box" style={{ 
-      width: '240px', 
+      width: '100%',
       padding: '16px',
       height: 'fit-content'
     }}>

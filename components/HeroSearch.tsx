@@ -2,10 +2,9 @@
 
 import { useState, useRef, useCallback } from 'react';
 import { formatTagName } from '@/lib/tag-utils';
-import { GRANT_TAGS } from '@/lib/constants';
 
 interface Tag {
-  id?: string;
+  id: string;
   name: string;
   slug: string;
 }
@@ -24,28 +23,25 @@ export function HeroSearch({ onSearch }: HeroSearchProps) {
   const [isTyping, setIsTyping] = useState(true); // true = typing, false = deleting
   const animationRef = useRef<NodeJS.Timeout | null>(null);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const tagsLoadedRef = useRef(false);
-  
-  // Refs to track current values for animation
-  const stateRefs = useRef({
-    isAnimating: true,
-    tags: [] as Tag[],
-    currentTagIndex: 0,
-    currentCharIndex: 0,
-    isTyping: true,
-    inputValue: 'I am a ',
-    displayText: 'I am a '
-  });
+  const fetchTagsRef = useRef(false);
+  const animationStartedRef = useRef(false);
+  const isAnimatingRef = useRef(isAnimating);
+  const tagsRef = useRef(tags);
+  const currentTagIndexRef = useRef(currentTagIndex);
+  const currentCharIndexRef = useRef(currentCharIndex);
+  const isTypingRef = useRef(isTyping);
+  const inputValueRef = useRef(inputValue);
+  const displayTextRef = useRef(displayText);
+  const pendingStartRef = useRef(false);
 
   // Keep refs in sync with state
-  stateRefs.current.isAnimating = isAnimating;
-  stateRefs.current.tags = tags;
-  stateRefs.current.currentTagIndex = currentTagIndex;
-  stateRefs.current.currentCharIndex = currentCharIndex;
-  stateRefs.current.isTyping = isTyping;
-  stateRefs.current.inputValue = inputValue;
-  stateRefs.current.displayText = displayText;
+  isAnimatingRef.current = isAnimating;
+  tagsRef.current = tags;
+  currentTagIndexRef.current = currentTagIndex;
+  currentCharIndexRef.current = currentCharIndex;
+  isTypingRef.current = isTyping;
+  inputValueRef.current = inputValue;
+  displayTextRef.current = displayText;
 
   // Animation step function using refs to avoid stale closures
   const runAnimationStep = useCallback(() => {
@@ -56,29 +52,32 @@ export function HeroSearch({ onSearch }: HeroSearchProps) {
     }
 
     const prefix = 'I am a ';
-    const state = stateRefs.current;
-    const userInput = state.inputValue.substring(prefix.length);
+    const currentInput = inputValueRef.current;
+    const userInput = currentInput.substring(prefix.length);
     
     // Stop animation if conditions aren't met
-    if (!state.isAnimating || state.tags.length === 0 || userInput.length > 0) {
+    if (!isAnimatingRef.current || tagsRef.current.length === 0 || userInput.length > 0) {
+      animationStartedRef.current = false;
       return;
     }
 
-    const currentTag = state.tags[state.currentTagIndex];
+    const currentTag = tagsRef.current[currentTagIndexRef.current];
     if (!currentTag) {
       // If no tag at current index, reset to first tag
-      if (state.tags.length > 0) {
-        state.currentTagIndex = 0;
-        state.currentCharIndex = 0;
-        state.isTyping = true;
-        state.displayText = prefix;
+      if (tagsRef.current.length > 0) {
+        currentTagIndexRef.current = 0;
         setCurrentTagIndex(0);
+        currentCharIndexRef.current = 0;
         setCurrentCharIndex(0);
         setIsTyping(true);
+        isTypingRef.current = true;
         setDisplayText(prefix);
+        displayTextRef.current = prefix;
         animationRef.current = setTimeout(() => {
           runAnimationStep();
         }, 100);
+      } else {
+        animationStartedRef.current = false;
       }
       return;
     }
@@ -86,17 +85,17 @@ export function HeroSearch({ onSearch }: HeroSearchProps) {
     const baseText = 'I am a ';
     const fullTagText = formatTagName(currentTag.name);
 
-    if (state.isTyping) {
+    if (isTypingRef.current) {
       // Typing: add characters left to right
-      if (state.currentCharIndex < fullTagText.length) {
-        const nextCharIndex = state.currentCharIndex + 1;
+      if (currentCharIndexRef.current < fullTagText.length) {
+        const nextCharIndex = currentCharIndexRef.current + 1;
         const newDisplayText = baseText + fullTagText.substring(0, nextCharIndex);
         
         // Update refs first, then state
-        state.currentCharIndex = nextCharIndex;
-        state.displayText = newDisplayText;
+        currentCharIndexRef.current = nextCharIndex;
+        displayTextRef.current = newDisplayText;
         
-        // Update state
+        // Update state - React will batch these
         setDisplayText(newDisplayText);
         setCurrentCharIndex(nextCharIndex);
         
@@ -107,20 +106,20 @@ export function HeroSearch({ onSearch }: HeroSearchProps) {
       } else {
         // Finished typing, wait a bit then start deleting
         animationRef.current = setTimeout(() => {
-          state.isTyping = false;
           setIsTyping(false);
+          isTypingRef.current = false;
           runAnimationStep();
         }, 2000); // Wait 2 seconds before deleting
       }
     } else {
       // Deleting: remove characters right to left
-      if (state.currentCharIndex > 0) {
-        const nextCharIndex = state.currentCharIndex - 1;
+      if (currentCharIndexRef.current > 0) {
+        const nextCharIndex = currentCharIndexRef.current - 1;
         const newDisplayText = baseText + fullTagText.substring(0, nextCharIndex);
         
         // Update refs first, then state
-        state.currentCharIndex = nextCharIndex;
-        state.displayText = newDisplayText;
+        currentCharIndexRef.current = nextCharIndex;
+        displayTextRef.current = newDisplayText;
         
         // Update state
         setDisplayText(newDisplayText);
@@ -132,13 +131,13 @@ export function HeroSearch({ onSearch }: HeroSearchProps) {
         }, 50); // 50ms per character (faster deletion)
       } else {
         // Finished deleting, move to next tag
-        const nextTagIndex = (state.currentTagIndex + 1) % state.tags.length;
+        const nextTagIndex = (currentTagIndexRef.current + 1) % tagsRef.current.length;
         
         // Update refs first
-        state.currentTagIndex = nextTagIndex;
-        state.currentCharIndex = 0;
-        state.isTyping = true;
-        state.displayText = baseText;
+        currentTagIndexRef.current = nextTagIndex;
+        currentCharIndexRef.current = 0;
+        isTypingRef.current = true;
+        displayTextRef.current = baseText;
         
         // Update state
         setIsTyping(true);
@@ -162,66 +161,95 @@ export function HeroSearch({ onSearch }: HeroSearchProps) {
       animationRef.current = null;
     }
     
-    const state = stateRefs.current;
-    
-    // Check conditions
-    if (!state.isAnimating || state.tags.length === 0 || state.inputValue !== 'I am a ') {
+    // Check conditions - use current ref values
+    if (!isAnimatingRef.current || 
+        tagsRef.current.length === 0 || 
+        inputValueRef.current !== 'I am a ') {
+      animationStartedRef.current = false;
       return;
     }
     
-    // Initialize animation state
-    const initialText = 'I am a ';
-    state.currentTagIndex = 0;
-    state.currentCharIndex = 0;
-    state.isTyping = true;
-    state.displayText = initialText;
+    // Only start if not already started
+    if (animationStartedRef.current) {
+      return;
+    }
     
-    // Update state
+    // Initialize animation state - update refs first
+    const initialText = 'I am a ';
+    currentTagIndexRef.current = 0;
+    currentCharIndexRef.current = 0;
+    isTypingRef.current = true;
+    displayTextRef.current = initialText;
+    animationStartedRef.current = true;
+    
+    // Then update state
     setCurrentTagIndex(0);
     setCurrentCharIndex(0);
     setIsTyping(true);
     setDisplayText(initialText);
     
-    // Start the animation
+    // Start the animation immediately - runAnimationStep uses refs so it will work
+    // Use setTimeout to avoid calling during render
     setTimeout(() => {
-      runAnimationStep();
-    }, 100);
+      // Double-check conditions before starting
+      if (isAnimatingRef.current && tagsRef.current.length > 0 && inputValueRef.current === 'I am a ') {
+        runAnimationStep();
+      }
+    }, 0);
   }, [runAnimationStep]);
 
-  // Load tags from constants using ref callback pattern
-  const containerRefCallback = useCallback((node: HTMLDivElement | null) => {
-    containerRef.current = node;
-    if (node && !tagsLoadedRef.current) {
-      tagsLoadedRef.current = true;
-      // Use GRANT_TAGS from constants instead of API
-      // This ensures all defined tags are available even if not yet in database
-      const tagsFromConstants: Tag[] = GRANT_TAGS.map(tag => ({
-        name: tag.name,
-        slug: tag.slug
-      }));
-      
-      if (tagsFromConstants.length > 0) {
-        setTags(tagsFromConstants);
-        stateRefs.current.tags = tagsFromConstants;
-        // Start animation when tags are loaded
-        setTimeout(() => {
-          startAnimation();
-        }, 200);
-      }
-    }
-  }, [startAnimation]);
+  // Store startAnimation in a ref so it can be accessed in containerRefCallback
+  const startAnimationRef = useRef(startAnimation);
+  startAnimationRef.current = startAnimation;
 
-  // Start animation when conditions are met
-  if (isAnimating && tags.length > 0 && inputValue === 'I am a ' && !animationRef.current) {
+  // Fetch tags using ref callback pattern
+  const containerRefCallback = useCallback((node: HTMLDivElement | null) => {
+    if (node && !fetchTagsRef.current) {
+      fetchTagsRef.current = true;
+      fetch('/api/tags')
+        .then(response => response.json())
+        .then(data => {
+          if (data.tags && data.tags.length > 0) {
+            setTags(data.tags);
+            tagsRef.current = data.tags;
+            // Reset animation state when tags load
+            animationStartedRef.current = false;
+            pendingStartRef.current = false;
+            // Start animation when tags are loaded
+            setTimeout(() => {
+              if (isAnimatingRef.current && inputValueRef.current === 'I am a ') {
+                startAnimationRef.current();
+              }
+            }, 200); // Small delay to ensure state is updated
+          }
+        })
+        .catch(error => {
+          console.error('Error fetching tags:', error);
+        });
+    }
+  }, []);
+
+  // Check if we should start animation when state changes
+  // This handles cases where tags are loaded but animation hasn't started
+  // Only check this if animation is not currently running
+  if (isAnimating && tags.length > 0 && inputValue === 'I am a ' && !animationStartedRef.current && !animationRef.current && !pendingStartRef.current) {
+    pendingStartRef.current = true;
     setTimeout(() => {
-      startAnimation();
+      pendingStartRef.current = false;
+      // Double-check conditions before starting
+      if (isAnimatingRef.current && tagsRef.current.length > 0 && inputValueRef.current === 'I am a ' && !animationStartedRef.current) {
+        startAnimation();
+      }
     }, 0);
   }
   
-  // Stop animation if needed
-  if (!isAnimating && animationRef.current) {
-    clearTimeout(animationRef.current);
-    animationRef.current = null;
+  // Only stop animation if isAnimating state is false AND animation is actually running
+  if (!isAnimating && animationStartedRef.current) {
+    animationStartedRef.current = false;
+    if (animationRef.current) {
+      clearTimeout(animationRef.current);
+      animationRef.current = null;
+    }
   }
 
   // Handle input change
@@ -242,28 +270,30 @@ export function HeroSearch({ onSearch }: HeroSearchProps) {
     
     const userInput = value.substring(prefix.length);
     setInputValue(value);
-    stateRefs.current.inputValue = value;
+    inputValueRef.current = value;
     
     // Stop animation when user starts typing
     if (userInput.length > 0 && isAnimating) {
       setIsAnimating(false);
-      stateRefs.current.isAnimating = false;
+      isAnimatingRef.current = false;
       if (animationRef.current) {
         clearTimeout(animationRef.current);
         animationRef.current = null;
       }
+      animationStartedRef.current = false;
     } else if (userInput.length === 0) {
       // Restart animation when input is cleared (only prefix remains)
       setIsAnimating(true);
-      stateRefs.current.isAnimating = true;
+      isAnimatingRef.current = true;
       setCurrentCharIndex(0);
-      stateRefs.current.currentCharIndex = 0;
+      currentCharIndexRef.current = 0;
       setIsTyping(true);
-      stateRefs.current.isTyping = true;
+      isTypingRef.current = true;
       setCurrentTagIndex(0);
-      stateRefs.current.currentTagIndex = 0;
+      currentTagIndexRef.current = 0;
       setDisplayText(prefix);
-      stateRefs.current.displayText = prefix;
+      displayTextRef.current = prefix;
+      animationStartedRef.current = false;
       // Start animation after state updates
       setTimeout(() => {
         startAnimation();
@@ -284,17 +314,18 @@ export function HeroSearch({ onSearch }: HeroSearchProps) {
   // Handle input focus
   const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
     const prefix = 'I am a ';
-    const userInput = stateRefs.current.inputValue.substring(prefix.length);
-    if (userInput.length === 0 && stateRefs.current.isAnimating) {
+    const userInput = inputValueRef.current.substring(prefix.length);
+    if (userInput.length === 0 && isAnimatingRef.current) {
       setIsAnimating(false);
-      stateRefs.current.isAnimating = false;
+      isAnimatingRef.current = false;
       if (animationRef.current) {
         clearTimeout(animationRef.current);
         animationRef.current = null;
       }
+      animationStartedRef.current = false;
     }
     // Position cursor after prefix if input only contains prefix
-    if (stateRefs.current.inputValue === prefix) {
+    if (inputValueRef.current === prefix) {
       setTimeout(() => {
         e.target.setSelectionRange(prefix.length, prefix.length);
       }, 0);
@@ -304,22 +335,23 @@ export function HeroSearch({ onSearch }: HeroSearchProps) {
   // Handle input blur - restart animation if empty
   const handleBlur = () => {
     const prefix = 'I am a ';
-    const userInput = stateRefs.current.inputValue.substring(prefix.length);
+    const userInput = inputValueRef.current.substring(prefix.length);
     if (userInput.length === 0) {
       setIsAnimating(true);
-      stateRefs.current.isAnimating = true;
-      setCurrentCharIndex(0);
-      stateRefs.current.currentCharIndex = 0;
-      setIsTyping(true);
-      stateRefs.current.isTyping = true;
-      setCurrentTagIndex(0);
-      stateRefs.current.currentTagIndex = 0;
-      setDisplayText(prefix);
-      stateRefs.current.displayText = prefix;
-      // Start animation after state updates
-      setTimeout(() => {
-        startAnimation();
-      }, 100);
+      isAnimatingRef.current = true;
+        setCurrentCharIndex(0);
+        currentCharIndexRef.current = 0;
+        setIsTyping(true);
+        isTypingRef.current = true;
+        setCurrentTagIndex(0);
+        currentTagIndexRef.current = 0;
+        setDisplayText(prefix);
+        displayTextRef.current = prefix;
+        animationStartedRef.current = false;
+        // Start animation after state updates
+        setTimeout(() => {
+          startAnimation();
+        }, 100);
     }
   };
 

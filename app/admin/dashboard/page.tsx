@@ -3,9 +3,10 @@
 import { useState, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { format, isValid } from 'date-fns';
+import { format, isValid, formatDistanceToNow } from 'date-fns';
 import { AdminGrantSubmissionForm } from '@/components/AdminGrantSubmissionForm';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { formatTagName } from '@/lib/tag-utils';
 
 interface Grant {
   id: string;
@@ -52,6 +53,22 @@ interface ScrapeJob {
   grants: Array<{
     id: string;
     title: string;
+    organization: string;
+    amount?: string | null;
+    amountMin?: number | null;
+    amountMax?: number | null;
+    deadline?: Date | string | null;
+    location: string;
+    description: string;
+    eligibility?: string | null;
+    applicationUrl?: string | null;
+    category?: string;
+    tags?: Array<{
+      tag: {
+        name: string;
+        slug: string;
+      };
+    }>;
   }>;
 }
 
@@ -257,6 +274,22 @@ export default function AdminDashboard() {
       FAILED: { bg: 'var(--inset-bg)', color: 'var(--foreground)', border: 'var(--color-saddle-brown-700)' }
     };
     return styles[status] || { bg: 'var(--inset-bg)', color: 'var(--foreground)', border: 'var(--muted)' };
+  };
+
+  const formatGrantAmount = (grant: ScrapeJob['grants'][0]) => {
+    if (grant.amountMin !== null && grant.amountMin !== undefined && grant.amountMax !== null && grant.amountMax !== undefined) {
+      if (grant.amountMin === grant.amountMax) {
+        return `$${grant.amountMin.toLocaleString()}`;
+      }
+      return `$${grant.amountMin.toLocaleString()} - $${grant.amountMax.toLocaleString()}`;
+    } else if (grant.amountMax !== null && grant.amountMax !== undefined) {
+      return `Up to $${grant.amountMax.toLocaleString()}`;
+    } else if (grant.amountMin !== null && grant.amountMin !== undefined) {
+      return `From $${grant.amountMin.toLocaleString()}`;
+    } else if (grant.amount) {
+      return grant.amount;
+    }
+    return null;
   };
 
   const SortableHeader = ({ label, sortKey }: { label: string; sortKey: keyof Grant }) => (
@@ -509,18 +542,20 @@ export default function AdminDashboard() {
                       <button
                         onClick={() => handleToggleSource(source.id, source.isActive)}
                         className="aol-button"
-                        style={{ fontSize: '11px', padding: '2px 8px', height: 'auto' }}
+                        style={{ fontSize: '11px', padding: '2px 8px', height: 'auto', display: 'flex', alignItems: 'center', gap: '4px' }}
                         title={source.isActive ? 'Disable' : 'Enable'}
                       >
-                        {source.isActive ? '⏸️' : '▶️'}
+                        <span className="material-icons" style={{ fontSize: '14px' }}>
+                          {source.isActive ? 'pause' : 'play_arrow'}
+                        </span>
                       </button>
                       <button
                         onClick={() => handleDeleteSource(source.id)}
                         className="aol-button"
-                        style={{ fontSize: '11px', padding: '2px 8px', height: 'auto', color: 'red' }}
+                        style={{ fontSize: '11px', padding: '2px 8px', height: 'auto', display: 'flex', alignItems: 'center', gap: '4px', color: 'red' }}
                         title="Delete"
                       >
-                        ❌
+                        <span className="material-icons" style={{ fontSize: '14px' }}>delete</span>
                       </button>
                     </div>
                   </div>
@@ -585,17 +620,131 @@ export default function AdminDashboard() {
                             </div>
                           )}
                           {job.grants && job.grants.length > 0 && (
-                            <div style={{ marginTop: '4px' }}>
-                              {job.grants.map((grant) => (
-                                <div key={grant.id} style={{ fontSize: '12px', marginBottom: '4px' }}>
-                                  <a
-                                    href={`/admin/grants/${grant.id}`}
-                                    style={{ color: 'var(--primary)', textDecoration: 'none' }}
+                            <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                              {job.grants.map((grant) => {
+                                const deadline = grant.deadline ? new Date(grant.deadline) : null;
+                                const isExpired = deadline && deadline < new Date();
+                                const displayAmount = formatGrantAmount(grant);
+                                
+                                return (
+                                  <div
+                                    key={grant.id}
+                                    className="aol-box"
+                                    onClick={() => router.push(`/admin/grants/${grant.id}`)}
+                                    style={{
+                                      padding: '12px',
+                                      cursor: 'pointer',
+                                      transition: 'all 0.2s ease',
+                                    }}
+                                    onMouseEnter={(e) => {
+                                      e.currentTarget.style.borderColor = 'var(--primary)';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                      e.currentTarget.style.borderColor = 'var(--border-color)';
+                                    }}
                                   >
-                                    {grant.title}
-                                  </a>
-                                </div>
-                              ))}
+                                    <div style={{ display: 'flex', alignItems: 'start', justifyContent: 'space-between', gap: '12px', marginBottom: '8px' }}>
+                                      <div style={{ flex: 1 }}>
+                                        <h3 style={{
+                                          fontSize: '13px',
+                                          marginBottom: '6px',
+                                          color: 'var(--primary)',
+                                          fontWeight: 'bold',
+                                        }}>
+                                          {grant.title}
+                                        </h3>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                          <p style={{ color: 'var(--foreground)', fontWeight: 'bold', margin: 0, fontSize: '11px' }}>
+                                            {grant.organization}
+                                          </p>
+                                          <div className="flex items-center gap-2" style={{ gap: '12px', fontSize: '10px', flexWrap: 'wrap' }}>
+                                            <span className="flex items-center gap-1" style={{ fontWeight: 'bold', color: 'var(--foreground)' }}>
+                                              <span className="material-icons" style={{ fontSize: '12px', verticalAlign: 'middle' }}>location_on</span> {grant.location}
+                                            </span>
+                                            {grant.applicationUrl && (
+                                              <span
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  window.open(grant.applicationUrl!, '_blank', 'noopener,noreferrer');
+                                                }}
+                                                className="flex items-center gap-1"
+                                                style={{
+                                                  fontWeight: 'bold',
+                                                  color: 'var(--primary)',
+                                                  textDecoration: 'none',
+                                                  opacity: 0.8,
+                                                  cursor: 'pointer',
+                                                  whiteSpace: 'nowrap',
+                                                }}
+                                              >
+                                                <span className="material-icons" style={{ fontSize: '12px', verticalAlign: 'middle' }}>link</span> Apply
+                                              </span>
+                                            )}
+                                          </div>
+                                        </div>
+                                      </div>
+                                      <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px', textAlign: 'right' }}>
+                                        {displayAmount && (
+                                          <span style={{
+                                            display: 'inline-block',
+                                            padding: '2px 6px',
+                                            fontSize: '11px',
+                                            fontWeight: 'bold',
+                                            color: 'var(--foreground)',
+                                            border: '1px solid var(--secondary)',
+                                            borderRadius: '4px',
+                                            background: 'transparent',
+                                            textAlign: 'right',
+                                          }}>
+                                            {displayAmount}
+                                          </span>
+                                        )}
+                                        {deadline && (
+                                          <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px', fontWeight: 'bold', color: isExpired ? '#d32f2f' : 'var(--foreground)', fontSize: '10px', textAlign: 'right' }}>
+                                            <span className="material-icons" style={{ fontSize: '12px', verticalAlign: 'middle' }}>calendar_today</span> {isExpired ? 'Expired' : `Due in ${formatDistanceToNow(deadline)}`}
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+
+                                    {grant.tags && grant.tags.length > 0 && (
+                                      <div className="flex flex-wrap gap-1" style={{ gap: '6px', marginBottom: '8px' }}>
+                                        {grant.tags.map((tagRelation) => (
+                                          <span
+                                            key={tagRelation.tag.slug}
+                                            style={{
+                                              padding: '1px 4px',
+                                              fontSize: '10px',
+                                              background: 'var(--color-camel-800)',
+                                              color: 'var(--color-charcoal-brown-500)',
+                                              border: '1px solid var(--secondary)',
+                                              borderRadius: '4px',
+                                              fontWeight: 'bold',
+                                            }}
+                                          >
+                                            {formatTagName(tagRelation.tag.name)}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    )}
+
+                                    {grant.description && (
+                                      <div style={{
+                                        fontSize: '11px',
+                                        color: 'var(--foreground)',
+                                        lineHeight: '1.3',
+                                        display: '-webkit-box',
+                                        WebkitLineClamp: 2,
+                                        WebkitBoxOrient: 'vertical',
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis',
+                                      }}>
+                                        {grant.description}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
                             </div>
                           )}
                         </div>

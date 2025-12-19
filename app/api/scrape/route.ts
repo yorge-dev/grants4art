@@ -174,9 +174,12 @@ export async function GET(request: NextRequest) {
         take: limit,
         include: {
           grants: {
-            select: {
-              id: true,
-              title: true
+            include: {
+              tags: {
+                include: {
+                  tag: true
+                }
+              }
             }
           },
           grantSource: {
