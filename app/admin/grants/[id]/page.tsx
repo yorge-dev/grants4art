@@ -359,7 +359,7 @@ export default function EditGrantPage({ params }: { params: Promise<{ id: string
                     border: '1.5px solid var(--secondary)',
                     opacity: formData.category === '' ? 1 : 0.5,
                     fontWeight: formData.category === '' ? '600' : 'normal',
-                    transition: 'all 0.15s ease',
+                    transition: 'all 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
                     cursor: 'pointer',
                     borderRadius: '4px'
                   }}
@@ -399,7 +399,7 @@ export default function EditGrantPage({ params }: { params: Promise<{ id: string
                         border: '1.5px solid var(--secondary)',
                         opacity: isSelected ? 1 : 0.5,
                         fontWeight: isSelected ? '600' : 'normal',
-                        transition: 'all 0.15s ease',
+                        transition: 'all 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
                         cursor: 'pointer',
                         borderRadius: '4px'
                       }}
@@ -493,7 +493,7 @@ export default function EditGrantPage({ params }: { params: Promise<{ id: string
                     alignItems: 'center',
                     gap: '4px',
                     borderRadius: '4px',
-                    transition: 'opacity 0.15s ease'
+                    transition: 'opacity 0.15s cubic-bezier(0.4, 0, 0.2, 1)'
                   }}
                 >
                   {generatingTags ? (

@@ -168,7 +168,7 @@ export function GrantFilters({ onFilterChange }: GrantFiltersProps) {
                 textTransform: 'none',
                 letterSpacing: 'normal',
                 cursor: 'pointer',
-                transition: 'opacity 0.15s ease'
+                transition: 'opacity 0.15s cubic-bezier(0.4, 0, 0.2, 1)'
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.opacity = '0.8';
@@ -205,7 +205,7 @@ export function GrantFilters({ onFilterChange }: GrantFiltersProps) {
                   border: `1.5px solid var(--secondary)`,
                   opacity: isSelected ? 1 : 0.5,
                   fontWeight: isSelected ? '600' : 'normal',
-                  transition: 'all 0.15s ease',
+                  transition: 'all 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
                   cursor: 'pointer',
                   borderRadius: '4px'
                 }}

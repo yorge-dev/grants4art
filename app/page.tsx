@@ -187,7 +187,7 @@ export default function Home() {
                 textDecoration: 'none',
                 cursor: 'pointer',
                 display: 'block',
-                transition: 'opacity 0.2s ease',
+                transition: 'opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.opacity = '1';

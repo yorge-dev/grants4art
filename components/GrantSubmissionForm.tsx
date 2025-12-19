@@ -125,7 +125,7 @@ export function GrantSubmissionForm() {
             justifyContent: 'center',
             color: 'var(--foreground)',
             opacity: 0.7,
-            transition: 'opacity 0.15s ease',
+            transition: 'opacity 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
             borderRadius: '4px'
           }}
           onMouseEnter={(e) => {

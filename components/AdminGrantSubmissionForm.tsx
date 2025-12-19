@@ -159,7 +159,7 @@ export function AdminGrantSubmissionForm() {
         height: 'fit-content',
         position: 'relative',
         opacity: isExpanded ? 1 : (isHovered ? 0.9 : 0.5),
-        transition: 'width 0.3s ease, opacity 0.4s ease',
+        transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
         overflow: 'hidden',
       }}
     >
@@ -176,7 +176,7 @@ export function AdminGrantSubmissionForm() {
             alignItems: 'center',
             gap: '4px',
             whiteSpace: 'nowrap',
-            transition: 'opacity 0.3s ease',
+            transition: 'opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
           }}
         >
           <span>Know of a grant?</span>
@@ -186,7 +186,7 @@ export function AdminGrantSubmissionForm() {
               fontSize: '16px',
               opacity: isHovered ? 1 : 0,
               transform: isHovered ? 'translateX(4px)' : 'translateX(0)',
-              transition: 'opacity 0.3s ease, transform 0.3s ease',
+              transition: 'opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
               display: 'inline-flex',
               alignItems: 'center'
             }}
@@ -198,7 +198,7 @@ export function AdminGrantSubmissionForm() {
         <div
           style={{
             opacity: isExpanded ? 1 : 0,
-            transition: 'opacity 0.4s ease'
+            transition: 'opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
           }}
           onFocus={handleInteractionStart}
           onBlur={handleInteractionEnd}

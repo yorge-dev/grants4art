@@ -61,6 +61,12 @@ export function HeroSearch({ onSearch }: HeroSearchProps) {
       return;
     }
 
+    // Ensure we have tags before proceeding
+    if (tagsRef.current.length === 0) {
+      animationStartedRef.current = false;
+      return;
+    }
+
     const currentTag = tagsRef.current[currentTagIndexRef.current];
     if (!currentTag) {
       // If no tag at current index, reset to first tag
@@ -73,6 +79,7 @@ export function HeroSearch({ onSearch }: HeroSearchProps) {
         isTypingRef.current = true;
         setDisplayText(prefix);
         displayTextRef.current = prefix;
+        // Continue animation loop
         animationRef.current = setTimeout(() => {
           runAnimationStep();
         }, 100);
@@ -99,16 +106,21 @@ export function HeroSearch({ onSearch }: HeroSearchProps) {
         setDisplayText(newDisplayText);
         setCurrentCharIndex(nextCharIndex);
         
-        // Schedule next step
+        // Schedule next step - ensure animation continues
         animationRef.current = setTimeout(() => {
           runAnimationStep();
         }, 100); // 100ms per character
       } else {
         // Finished typing, wait a bit then start deleting
         animationRef.current = setTimeout(() => {
-          setIsTyping(false);
-          isTypingRef.current = false;
-          runAnimationStep();
+          // Check conditions again before continuing
+          if (isAnimatingRef.current && tagsRef.current.length > 0 && inputValueRef.current === prefix) {
+            setIsTyping(false);
+            isTypingRef.current = false;
+            runAnimationStep();
+          } else {
+            animationStartedRef.current = false;
+          }
         }, 2000); // Wait 2 seconds before deleting
       }
     } else {
@@ -125,7 +137,7 @@ export function HeroSearch({ onSearch }: HeroSearchProps) {
         setDisplayText(newDisplayText);
         setCurrentCharIndex(nextCharIndex);
         
-        // Schedule next step
+        // Schedule next step - ensure animation continues
         animationRef.current = setTimeout(() => {
           runAnimationStep();
         }, 50); // 50ms per character (faster deletion)
@@ -145,9 +157,14 @@ export function HeroSearch({ onSearch }: HeroSearchProps) {
         setCurrentCharIndex(0);
         setDisplayText(baseText);
         
-        // Schedule next step
+        // Schedule next step - ensure animation continues
         animationRef.current = setTimeout(() => {
-          runAnimationStep();
+          // Check conditions again before continuing
+          if (isAnimatingRef.current && tagsRef.current.length > 0 && inputValueRef.current === prefix) {
+            runAnimationStep();
+          } else {
+            animationStartedRef.current = false;
+          }
         }, 300); // Small delay before starting next tag
       }
     }
@@ -155,7 +172,7 @@ export function HeroSearch({ onSearch }: HeroSearchProps) {
 
   // Start animation function
   const startAnimation = useCallback(() => {
-    // Clear any existing animation
+    // Clear any existing animation first
     if (animationRef.current) {
       clearTimeout(animationRef.current);
       animationRef.current = null;
@@ -188,14 +205,18 @@ export function HeroSearch({ onSearch }: HeroSearchProps) {
     setIsTyping(true);
     setDisplayText(initialText);
     
-    // Start the animation immediately - runAnimationStep uses refs so it will work
-    // Use setTimeout to avoid calling during render
+    // Start the animation loop - use a small delay to ensure state updates are processed
     setTimeout(() => {
-      // Double-check conditions before starting
-      if (isAnimatingRef.current && tagsRef.current.length > 0 && inputValueRef.current === 'I am a ') {
+      // Final check before starting animation loop
+      if (isAnimatingRef.current && 
+          tagsRef.current.length > 0 && 
+          inputValueRef.current === 'I am a ' &&
+          animationStartedRef.current) {
         runAnimationStep();
+      } else {
+        animationStartedRef.current = false;
       }
-    }, 0);
+    }, 50);
   }, [runAnimationStep]);
 
   // Store startAnimation in a ref so it can be accessed in containerRefCallback
@@ -210,17 +231,41 @@ export function HeroSearch({ onSearch }: HeroSearchProps) {
         .then(response => response.json())
         .then(data => {
           if (data.tags && data.tags.length > 0) {
-            setTags(data.tags);
+            // Update tags ref immediately
             tagsRef.current = data.tags;
+            setTags(data.tags);
+            
             // Reset animation state when tags load
             animationStartedRef.current = false;
             pendingStartRef.current = false;
-            // Start animation when tags are loaded
+            
+            // Clear any existing animation
+            if (animationRef.current) {
+              clearTimeout(animationRef.current);
+              animationRef.current = null;
+            }
+            
+            // Reset animation state
+            const prefix = 'I am a ';
+            currentTagIndexRef.current = 0;
+            currentCharIndexRef.current = 0;
+            isTypingRef.current = true;
+            displayTextRef.current = prefix;
+            setCurrentTagIndex(0);
+            setCurrentCharIndex(0);
+            setIsTyping(true);
+            setDisplayText(prefix);
+            
+            // Start animation when tags are loaded - use multiple timeouts to ensure state is ready
             setTimeout(() => {
-              if (isAnimatingRef.current && inputValueRef.current === 'I am a ') {
+              // Double-check all conditions
+              if (isAnimatingRef.current && 
+                  tagsRef.current.length > 0 && 
+                  inputValueRef.current === prefix &&
+                  !animationStartedRef.current) {
                 startAnimationRef.current();
               }
-            }, 200); // Small delay to ensure state is updated
+            }, 100);
           }
         })
         .catch(error => {
@@ -229,27 +274,46 @@ export function HeroSearch({ onSearch }: HeroSearchProps) {
     }
   }, []);
 
-  // Check if we should start animation when state changes
-  // This handles cases where tags are loaded but animation hasn't started
-  // Only check this if animation is not currently running
-  if (isAnimating && tags.length > 0 && inputValue === 'I am a ' && !animationStartedRef.current && !animationRef.current && !pendingStartRef.current) {
-    pendingStartRef.current = true;
-    setTimeout(() => {
-      pendingStartRef.current = false;
-      // Double-check conditions before starting
-      if (isAnimatingRef.current && tagsRef.current.length > 0 && inputValueRef.current === 'I am a ' && !animationStartedRef.current) {
-        startAnimation();
-      }
-    }, 0);
-  }
+  // Handle animation start/stop based on state changes
+  // Use refs to track previous values and detect changes
+  const prevIsAnimatingRef = useRef(isAnimating);
+  const prevTagsLengthRef = useRef(tags.length);
+  const prevInputValueRef = useRef(inputValue);
   
-  // Only stop animation if isAnimating state is false AND animation is actually running
-  if (!isAnimating && animationStartedRef.current) {
-    animationStartedRef.current = false;
-    if (animationRef.current) {
-      clearTimeout(animationRef.current);
-      animationRef.current = null;
-    }
+  // Check for state changes that should trigger animation start/stop
+  const hasStateChanged = 
+    prevIsAnimatingRef.current !== isAnimating || 
+    prevTagsLengthRef.current !== tags.length || 
+    prevInputValueRef.current !== inputValue;
+  
+  if (hasStateChanged) {
+    // Update refs immediately
+    prevIsAnimatingRef.current = isAnimating;
+    prevTagsLengthRef.current = tags.length;
+    prevInputValueRef.current = inputValue;
+    
+    // Schedule check after state has settled - use requestAnimationFrame for better timing
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        // Start animation if conditions are met
+        if (isAnimatingRef.current && 
+            tagsRef.current.length > 0 && 
+            inputValueRef.current === 'I am a ' && 
+            !animationStartedRef.current && 
+            !animationRef.current) {
+          startAnimation();
+        }
+        
+        // Stop animation if isAnimating is false
+        if (!isAnimatingRef.current && animationStartedRef.current) {
+          animationStartedRef.current = false;
+          if (animationRef.current) {
+            clearTimeout(animationRef.current);
+            animationRef.current = null;
+          }
+        }
+      });
+    });
   }
 
   // Handle input change
@@ -466,7 +530,7 @@ export function HeroSearch({ onSearch }: HeroSearchProps) {
             51%, 100% { opacity: 0; }
           }
           .hero-cursor {
-            animation: hero-blink 1s infinite;
+            animation: hero-blink 1s cubic-bezier(0.4, 0, 0.2, 1) infinite;
           }
         `
       }} />

@@ -91,7 +91,7 @@ export function VersionPatchNotes({ expanded: controlledExpanded, onExpandedChan
             fontSize: '20px',
             color: 'var(--foreground)',
             transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
-            transition: 'transform 0.3s ease',
+            transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
           }}
         >
           expand_more
@@ -109,7 +109,7 @@ export function VersionPatchNotes({ expanded: controlledExpanded, onExpandedChan
           maxHeight: isExpanded ? '1000px' : '0',
           overflowY: isExpanded ? 'auto' : 'hidden',
           overflowX: 'hidden',
-          transition: 'opacity 0.3s ease, max-height 0.3s ease, padding 0.3s ease, border 0.3s ease',
+          transition: 'opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s cubic-bezier(0.4, 0, 0.2, 1), border 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
           visibility: isExpanded ? 'visible' : 'hidden',
         }}
       >

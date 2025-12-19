@@ -53,7 +53,7 @@ function GrantTooltip({ description, eligibility, isVisible }: GrantTooltipProps
         maxHeight: isVisible ? '600px' : '0',
         overflowY: isVisible ? 'auto' : 'hidden',
         overflowX: 'hidden',
-        transition: 'opacity 0.3s ease, max-height 0.3s ease, padding 0.3s ease, border-color 0.3s ease',
+        transition: 'opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
         visibility: isVisible ? 'visible' : 'hidden',
         scrollbarWidth: 'none',
         msOverflowStyle: 'none',
@@ -299,7 +299,7 @@ export function GrantCard({ grant, isLocked = false, onLock, onUnlock }: GrantCa
             textDecorationColor: isLocked ? 'var(--secondary)' : 'transparent',
             textDecorationThickness: isLocked ? '2px' : '0',
             textUnderlineOffset: isLocked ? '2px' : '0',
-            transition: 'text-decoration 0.2s ease, text-decoration-color 0.2s ease',
+            transition: 'text-decoration 0.2s cubic-bezier(0.4, 0, 0.2, 1), text-decoration-color 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
             display: 'inline-block',
           }}>
             {grant.title}
@@ -328,7 +328,7 @@ export function GrantCard({ grant, isLocked = false, onLock, onUnlock }: GrantCa
                     color: 'var(--primary)',
                     textDecoration: 'none',
                     opacity: 0.8,
-                    transition: 'opacity 0.2s ease',
+                    transition: 'opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                     cursor: 'pointer',
                     whiteSpace: 'nowrap',
                   }}
@@ -353,10 +353,9 @@ export function GrantCard({ grant, isLocked = false, onLock, onUnlock }: GrantCa
               fontSize: '12px',
               fontWeight: 'bold',
               color: 'var(--foreground)',
-              border: '1px solid var(--secondary)',
               borderRadius: '4px',
               background: 'transparent',
-              transition: 'all 0.3s ease',
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
               textAlign: 'right',
               position: 'relative',
             }}>
@@ -412,7 +411,7 @@ export function GrantCard({ grant, isLocked = false, onLock, onUnlock }: GrantCa
           textOverflow: 'ellipsis',
           opacity: tooltipVisible ? 0 : 1,
           maxHeight: tooltipVisible ? '0' : 'none',
-          transition: 'opacity 0.3s ease, max-height 0.3s ease, margin-bottom 0.3s ease',
+          transition: 'opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), margin-bottom 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
         }}
       >
         <p style={{ margin: 0 }}>

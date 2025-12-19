@@ -28,7 +28,7 @@ function GrantTooltip({ description, eligibility, isVisible }: GrantTooltipProps
         maxHeight: isVisible ? '600px' : '0',
         overflowY: isVisible ? 'auto' : 'hidden',
         overflowX: 'hidden',
-        transition: 'opacity 0.3s ease, max-height 0.3s ease, padding 0.3s ease, border-color 0.3s ease',
+        transition: 'opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
         visibility: isVisible ? 'visible' : 'hidden',
         scrollbarWidth: 'none',
         msOverflowStyle: 'none',
@@ -208,7 +208,7 @@ function GrantPreviewCard({ grant, router }: GrantPreviewCardProps) {
             textDecorationColor: tooltipVisible ? 'var(--secondary)' : 'transparent',
             textDecorationThickness: tooltipVisible ? '2px' : '0',
             textUnderlineOffset: tooltipVisible ? '2px' : '0',
-            transition: 'text-decoration 0.2s ease, text-decoration-color 0.2s ease',
+            transition: 'text-decoration 0.2s cubic-bezier(0.4, 0, 0.2, 1), text-decoration-color 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
             display: 'inline-block',
           }}>
             {grant.title}
@@ -235,7 +235,7 @@ function GrantPreviewCard({ grant, router }: GrantPreviewCardProps) {
                     opacity: 0.8,
                     cursor: 'pointer',
                     whiteSpace: 'nowrap',
-                    transition: 'opacity 0.2s ease',
+                    transition: 'opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.opacity = '1';
@@ -310,7 +310,7 @@ function GrantPreviewCard({ grant, router }: GrantPreviewCardProps) {
             textOverflow: 'ellipsis',
             opacity: tooltipVisible ? 0 : 1,
             maxHeight: tooltipVisible ? '0' : 'none',
-            transition: 'opacity 0.3s ease, max-height 0.3s ease, margin-bottom 0.3s ease',
+            transition: 'opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), margin-bottom 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
           }}
         >
           <p style={{ margin: 0 }}>
@@ -1040,7 +1040,7 @@ export default function AdminDashboard() {
                   justifyContent: 'center',
                   color: 'var(--foreground)',
                   opacity: isColumnSettingsHovered ? 1 : 0.7,
-                  transition: 'opacity 0.15s ease',
+                  transition: 'opacity 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
                   borderRadius: '4px'
                 }}
                 title="Column Settings"
@@ -1098,7 +1098,7 @@ export default function AdminDashboard() {
                               border: 'none',
                               opacity: isVisible ? 1 : 0.5,
                               fontWeight: isVisible ? '600' : 'normal',
-                              transition: 'all 0.15s ease',
+                              transition: 'all 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
                               cursor: 'pointer',
                               borderRadius: '4px'
                             }}
@@ -1123,7 +1123,7 @@ export default function AdminDashboard() {
                                 borderRadius: '50%',
                                 border: isVisible ? 'none' : `2px solid var(--secondary)`,
                                 backgroundColor: isVisible ? 'var(--accent)' : 'transparent',
-                                transition: 'all 0.15s ease',
+                                transition: 'all 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
                                 flexShrink: 0
                               }}
                             />
@@ -1229,7 +1229,7 @@ export default function AdminDashboard() {
                               alignItems: 'center',
                               justifyContent: 'center',
                               cursor: 'pointer',
-                              transition: 'opacity 0.2s ease'
+                              transition: 'opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
                             }}
                             onMouseEnter={(e) => {
                               e.currentTarget.style.opacity = '0.7';

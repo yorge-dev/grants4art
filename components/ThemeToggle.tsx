@@ -96,7 +96,7 @@ export function ThemeToggle() {
           justifyContent: 'center',
           color: 'var(--foreground)',
           opacity: isHovered ? 1 : 0.7,
-          transition: 'opacity 0.15s ease',
+          transition: 'opacity 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
           borderRadius: '4px'
         }}
         aria-label="Theme settings"
@@ -152,7 +152,7 @@ export function ThemeToggle() {
                       border: 'none',
                       opacity: isSelected ? 1 : 0.5,
                       fontWeight: isSelected ? '600' : 'normal',
-                      transition: 'all 0.15s ease',
+                      transition: 'all 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
                       cursor: 'pointer',
                       borderRadius: '4px'
                     }}
@@ -191,7 +191,7 @@ export function ThemeToggle() {
                         borderRadius: '50%',
                         border: isSelected ? 'none' : `2px solid var(--secondary)`,
                         backgroundColor: isSelected ? 'var(--accent)' : 'transparent',
-                        transition: 'all 0.15s ease',
+                        transition: 'all 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
                         flexShrink: 0
                       }}
                     />
@@ -208,7 +208,7 @@ export function ThemeToggle() {
                         position: 'relative',
                         cursor: 'pointer',
                         padding: 0,
-                        transition: 'all 0.15s ease',
+                        transition: 'all 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
                         flexShrink: 0
                       }}
                       aria-label={isGreyInverted ? 'Disable inverted grey' : 'Enable inverted grey'}
@@ -222,7 +222,7 @@ export function ThemeToggle() {
                           position: 'absolute',
                           top: '1px',
                           left: isGreyInverted ? '15px' : '1px',
-                          transition: 'left 0.15s ease',
+                          transition: 'left 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
                           boxShadow: '0 1px 2px rgba(0, 0, 0, 0.2)'
                         }}
                       />

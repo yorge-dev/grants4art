@@ -193,7 +193,7 @@ html {
   padding: 0;
   overflow-x: hidden;
   background: var(--background);
-  transition: background-color 0.3s ease;
+  transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 body {
@@ -204,7 +204,7 @@ body {
   font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
   font-size: 14px;
   line-height: 1.5;
-  transition: background-color 0.3s ease, color 0.3s ease;
+  transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   min-height: 100vh;
   position: relative;
   cursor: url('/cursor-light.svg') 3 3, auto;
@@ -441,7 +441,7 @@ body > * {
   box-shadow: 
     2px 2px 4px rgba(55, 62, 64, 0.15),
     inset 1px 1px 0 rgba(255, 255, 255, 0.8);
-  transition: background-color 0.3s ease, border-color 0.3s ease;
+  transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 [data-theme='grey'] .aol-box {
@@ -469,7 +469,7 @@ body > * {
   border: 4px inset var(--secondary);
   border-radius: 12px;
   padding: 12px;
-  transition: background-color 0.3s ease, border-color 0.3s ease;
+  transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* Input Styles */
@@ -481,7 +481,7 @@ body > * {
   font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
   font-size: 13px;
   color: var(--foreground);
-  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+  transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .aol-input:focus {
@@ -576,5 +576,5 @@ body > * {
 }
 
 .theme-dropdown {
-  animation: fadeIn 0.15s ease;
+  animation: fadeIn 0.15s cubic-bezier(0.4, 0, 0.2, 1);
 }
