@@ -188,7 +188,16 @@ export default function EditGrantPage({ params }: { params: Promise<{ id: string
             <button
               type="button"
               onClick={() => router.back()}
-              className="aol-button-secondary"
+              style={{
+                background: 'var(--secondary)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                padding: '6px 12px',
+                fontSize: '12px',
+                fontWeight: 'bold',
+                cursor: 'pointer'
+              }}
             >
               Cancel
             </button>
@@ -196,8 +205,17 @@ export default function EditGrantPage({ params }: { params: Promise<{ id: string
               type="submit"
               form="edit-grant-form"
               disabled={saving}
-              className="aol-button"
-              style={{ opacity: saving ? 0.5 : 1, cursor: saving ? 'not-allowed' : 'pointer' }}
+              style={{
+                background: 'var(--primary)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                padding: '6px 12px',
+                fontSize: '12px',
+                fontWeight: 'bold',
+                cursor: saving ? 'not-allowed' : 'pointer',
+                opacity: saving ? 0.6 : 1
+              }}
             >
               {saving ? 'Saving...' : 'Save Changes'}
             </button>
@@ -314,24 +332,97 @@ export default function EditGrantPage({ params }: { params: Promise<{ id: string
             </div>
 
             <div className="md:col-span-2">
-              <label htmlFor="category" className="block compact-mb" style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--foreground)', marginBottom: '2px' }}>
+              <label className="block compact-mb" style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--foreground)', marginBottom: '8px' }}>
                 Funding Source (Category)
               </label>
-              <select
-                id="category"
+              <input
+                type="hidden"
                 name="category"
                 value={formData.category}
-                onChange={handleChange}
-                className="aol-input"
-                style={{ width: '100%' }}
-              >
-                <option value="">Select a category</option>
-                {GRANT_CATEGORIES.map(category => (
-                  <option key={category.slug} value={category.slug}>
-                    {category.icon} {category.name}
-                  </option>
-                ))}
-              </select>
+              />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFormData(prev => ({ ...prev, category: '' }));
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '6px 10px',
+                    fontSize: '12px',
+                    textAlign: 'left',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    backgroundColor: formData.category === '' ? 'var(--primary)' : 'transparent',
+                    color: formData.category === '' ? '#fff' : 'var(--foreground)',
+                    border: '1.5px solid var(--secondary)',
+                    opacity: formData.category === '' ? 1 : 0.5,
+                    fontWeight: formData.category === '' ? '600' : 'normal',
+                    transition: 'all 0.15s ease',
+                    cursor: 'pointer',
+                    borderRadius: '4px'
+                  }}
+                >
+                  <span style={{ flex: 1 }}>None</span>
+                  {formData.category === '' && (
+                    <div
+                      style={{
+                        width: '16px',
+                        height: '16px',
+                        borderRadius: '50%',
+                        backgroundColor: '#fff',
+                        flexShrink: 0
+                      }}
+                    />
+                  )}
+                </button>
+                {GRANT_CATEGORIES.map((category) => {
+                  const isSelected = formData.category === category.slug;
+                  return (
+                    <button
+                      key={category.slug}
+                      type="button"
+                      onClick={() => {
+                        setFormData(prev => ({ ...prev, category: category.slug }));
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: '6px 10px',
+                        fontSize: '12px',
+                        textAlign: 'left',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        backgroundColor: isSelected ? category.color : 'transparent',
+                        color: isSelected ? '#fff' : 'var(--foreground)',
+                        border: '1.5px solid var(--secondary)',
+                        opacity: isSelected ? 1 : 0.5,
+                        fontWeight: isSelected ? '600' : 'normal',
+                        transition: 'all 0.15s ease',
+                        cursor: 'pointer',
+                        borderRadius: '4px'
+                      }}
+                    >
+                      <span className="material-icons" style={{ fontSize: '18px', lineHeight: '1', display: 'flex', alignItems: 'center' }}>
+                        {category.icon}
+                      </span>
+                      <span style={{ flex: 1 }}>{category.name}</span>
+                      {isSelected && (
+                        <div
+                          style={{
+                            width: '16px',
+                            height: '16px',
+                            borderRadius: '50%',
+                            backgroundColor: '#fff',
+                            flexShrink: 0
+                          }}
+                        />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             <div className="md:col-span-2">
@@ -390,25 +481,29 @@ export default function EditGrantPage({ params }: { params: Promise<{ id: string
                   type="button"
                   onClick={handleGenerateTags}
                   disabled={generatingTags}
-                  className="text-xs hover:underline"
                   style={{ 
                     fontSize: '11px', 
                     color: 'var(--primary)', 
-                    background: 'none', 
+                    background: 'transparent', 
                     border: 'none', 
-                    padding: '0', 
+                    padding: '4px 8px', 
                     cursor: generatingTags ? 'not-allowed' : 'pointer',
-                    opacity: generatingTags ? 0.7 : 1
+                    opacity: generatingTags ? 0.6 : 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    borderRadius: '4px',
+                    transition: 'opacity 0.15s ease'
                   }}
                 >
                   {generatingTags ? (
                     <>
-                      <span className="material-icons" style={{ fontSize: '14px', display: 'inline-block', animation: 'spin 1s linear infinite', marginRight: '4px' }}>refresh</span>
+                      <span className="material-icons" style={{ fontSize: '14px', display: 'inline-block', animation: 'spin 1s linear infinite' }}>refresh</span>
                       Generating...
                     </>
                   ) : (
                     <>
-                      <span className="material-icons" style={{ fontSize: '14px', marginRight: '4px' }}>auto_awesome</span>
+                      <span className="material-icons" style={{ fontSize: '14px' }}>auto_awesome</span>
                       Generate Tags with Gemini
                     </>
                   )}
@@ -428,19 +523,37 @@ export default function EditGrantPage({ params }: { params: Promise<{ id: string
 
           </div>
 
-          <div style={{ display: 'flex', gap: '8px', paddingTop: '16px', borderTop: '1px solid var(--border-color)' }}>
+          <div style={{ display: 'flex', gap: '8px', paddingTop: '16px' }}>
             <button
               type="submit"
               disabled={loading}
-              className="aol-button"
-              style={{ opacity: loading ? 0.5 : 1, cursor: loading ? 'not-allowed' : 'pointer' }}
+              style={{
+                background: 'var(--primary)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                padding: '6px 12px',
+                fontSize: '12px',
+                fontWeight: 'bold',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                opacity: loading ? 0.6 : 1
+              }}
             >
               {loading ? 'Creating...' : 'Create Grant'}
             </button>
             <button
               type="button"
               onClick={() => router.back()}
-              className="aol-button-secondary"
+              style={{
+                background: 'var(--secondary)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                padding: '6px 12px',
+                fontSize: '12px',
+                fontWeight: 'bold',
+                cursor: 'pointer'
+              }}
             >
               Cancel
             </button>

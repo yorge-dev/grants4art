@@ -342,7 +342,9 @@ export default function AdminDashboard() {
 
   // Column Visibility State
   const [showColumnSettings, setShowColumnSettings] = useState(false);
+  const [isColumnSettingsHovered, setIsColumnSettingsHovered] = useState(false);
   const columnSettingsRef = useRef<HTMLDivElement>(null);
+  const columnSettingsHideTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   // Load column visibility from localStorage or use defaults
   const getDefaultColumnVisibility = () => ({
@@ -720,65 +722,64 @@ export default function AdminDashboard() {
           <div style={{ margin: '0 8px 32px 8px' }}>
             {/* Table Header with Column Settings */}
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '8px', position: 'relative' }}>
-              {/* Backdrop for closing dropdown */}
+              {/* Column Settings Button */}
+            <div 
+              style={{ position: 'relative', zIndex: 20 }}
+              onMouseEnter={() => {
+                if (columnSettingsHideTimeoutRef.current) {
+                  clearTimeout(columnSettingsHideTimeoutRef.current);
+                  columnSettingsHideTimeoutRef.current = null;
+                }
+                setIsColumnSettingsHovered(true);
+                setShowColumnSettings(true);
+              }}
+              onMouseLeave={() => {
+                columnSettingsHideTimeoutRef.current = setTimeout(() => {
+                  setIsColumnSettingsHovered(false);
+                  setShowColumnSettings(false);
+                  columnSettingsHideTimeoutRef.current = null;
+                }, 150);
+              }}
+            >
+              <button
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  padding: '4px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'var(--foreground)',
+                  opacity: isColumnSettingsHovered ? 1 : 0.7,
+                  transition: 'opacity 0.15s ease',
+                  borderRadius: '4px'
+                }}
+                title="Column Settings"
+                aria-label="Column Settings"
+              >
+                <span className="material-icons" style={{ fontSize: '20px' }}>build</span>
+              </button>
+              
+              {/* Column Settings Dropdown */}
               {showColumnSettings && (
                 <div
-                  onClick={() => setShowColumnSettings(false)}
+                  ref={columnSettingsRef}
                   style={{
-                    position: 'fixed',
-                    top: 0,
-                    left: 0,
+                    position: 'absolute',
+                    top: '100%',
                     right: 0,
-                    bottom: 0,
-                    zIndex: 15,
-                    background: 'transparent',
+                    marginTop: '8px',
+                    background: 'var(--text-field-bg)',
+                    border: '2px solid var(--secondary)',
+                    borderRadius: '8px',
+                    padding: '8px',
+                    minWidth: '200px',
+                    zIndex: 10000,
+                    boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
                   }}
-                />
-              )}
-              
-              {/* Column Settings Button */}
-              <div style={{ position: 'relative', zIndex: 20 }}>
-                <button
-                  onClick={() => setShowColumnSettings(!showColumnSettings)}
-                  style={{
-                    padding: '4px 8px',
-                    fontSize: '12px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    background: 'var(--secondary)',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                    fontWeight: 'bold'
-                  }}
-                  title="Column Settings"
                 >
-                  <span className="material-icons" style={{ fontSize: '16px' }}>build</span>
-                </button>
-                
-                {/* Column Settings Dropdown */}
-                {showColumnSettings && (
-                  <div
-                    ref={columnSettingsRef}
-                    className="aol-box-inset"
-                    onClick={(e) => e.stopPropagation()}
-                    style={{
-                      position: 'absolute',
-                      top: '100%',
-                      right: '0',
-                      marginTop: '4px',
-                      padding: '12px',
-                      minWidth: '200px',
-                      zIndex: 25,
-                      boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
-                    }}
-                  >
-                    <div style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: 'var(--primary)' }}>
-                      Column Visibility
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                       {[
                         { key: 'title', label: 'Title' },
                         { key: 'organization', label: 'Organization' },
@@ -790,27 +791,57 @@ export default function AdminDashboard() {
                         { key: 'category', label: 'Funding Source' },
                         { key: 'tags', label: 'Tags' },
                         { key: 'createdAt', label: 'Live Date' },
-                      ].map((col) => (
-                        <label
-                          key={col.key}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            fontSize: '11px',
-                            cursor: 'pointer',
-                            userSelect: 'none',
-                          }}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={columnVisibility[col.key] ?? true}
-                            onChange={(e) => updateColumnVisibility(col.key, e.target.checked)}
-                            style={{ cursor: 'pointer' }}
-                          />
-                          <span>{col.label}</span>
-                        </label>
-                      ))}
+                      ].map((col) => {
+                        const isVisible = columnVisibility[col.key] ?? true;
+                        return (
+                          <button
+                            key={col.key}
+                            onClick={() => updateColumnVisibility(col.key, !isVisible)}
+                            style={{
+                              width: '100%',
+                              padding: '6px 10px',
+                              fontSize: '12px',
+                              textAlign: 'left',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              backgroundColor: 'transparent',
+                              color: 'var(--foreground)',
+                              border: 'none',
+                              opacity: isVisible ? 1 : 0.5,
+                              fontWeight: isVisible ? '600' : 'normal',
+                              transition: 'all 0.15s ease',
+                              cursor: 'pointer',
+                              borderRadius: '4px'
+                            }}
+                            onMouseEnter={(e) => {
+                              if (!isVisible) {
+                                e.currentTarget.style.opacity = '0.7';
+                              }
+                            }}
+                            onMouseLeave={(e) => {
+                              if (!isVisible) {
+                                e.currentTarget.style.opacity = '0.5';
+                              }
+                            }}
+                          >
+                            <span style={{ flex: 1, opacity: isVisible ? 1 : 0.5 }}>
+                              {col.label}
+                            </span>
+                            <div
+                              style={{
+                                width: '16px',
+                                height: '16px',
+                                borderRadius: '50%',
+                                border: isVisible ? 'none' : `2px solid var(--secondary)`,
+                                backgroundColor: isVisible ? 'var(--accent)' : 'transparent',
+                                transition: 'all 0.15s ease',
+                                flexShrink: 0
+                              }}
+                            />
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
