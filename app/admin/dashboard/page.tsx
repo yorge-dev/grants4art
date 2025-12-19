@@ -642,7 +642,7 @@ export default function AdminDashboard() {
     <th
       style={{
         padding: '8px',
-        textAlign: 'left',
+        textAlign: sortKey === 'status' ? 'center' : 'left',
         fontWeight: 'bold',
         color: 'var(--foreground)',
         whiteSpace: 'nowrap',
@@ -651,7 +651,7 @@ export default function AdminDashboard() {
       }}
       onClick={() => handleSourceSort(sortKey)}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', justifyContent: sortKey === 'status' ? 'center' : 'flex-start' }}>
         {label}
         {sourceSortConfig.key === sortKey && (
           <span style={{ fontSize: '10px' }}>
@@ -928,10 +928,30 @@ export default function AdminDashboard() {
                       </td>
                     )}
                     {columnVisibility.applicationUrl && (
-                      <td className="compact-px compact-py" style={{ padding: '4px 6px', fontSize: '10px', color: 'var(--primary)', maxWidth: '200px' }}>
+                      <td className="compact-px compact-py" style={{ padding: '4px 6px', textAlign: 'center' }}>
                         {grant.applicationUrl ? (
-                          <a href={grant.applicationUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary)', textDecoration: 'none', wordBreak: 'break-all' }}>
-                            {grant.applicationUrl.length > 30 ? `${grant.applicationUrl.substring(0, 30)}...` : grant.applicationUrl}
+                          <a 
+                            href={grant.applicationUrl} 
+                            target="_blank" 
+                            rel="noopener noreferrer" 
+                            style={{ 
+                              color: 'var(--primary)', 
+                              textDecoration: 'none',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              cursor: 'pointer',
+                              transition: 'opacity 0.2s ease'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.opacity = '0.7';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.opacity = '1';
+                            }}
+                            title={grant.applicationUrl}
+                          >
+                            <span className="material-icons" style={{ fontSize: '16px' }}>language</span>
                           </a>
                         ) : '-'}
                       </td>
@@ -1082,11 +1102,25 @@ export default function AdminDashboard() {
             <h2 className="aol-heading compact-mb" style={{ fontSize: '16px', marginBottom: '12px' }}>
               Grant Sources & Scrape Jobs
             </h2>
-            <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0', fontSize: '11px' }}>
+            <style>{`
+              @media (max-width: 768px) {
+                .sources-table {
+                  font-size: 10px !important;
+                }
+                .sources-table th,
+                .sources-table td {
+                  padding: 6px 4px !important;
+                }
+                .sources-table .source-name {
+                  max-width: 120px !important;
+                }
+              }
+            `}</style>
+            <table className="sources-table" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0', fontSize: '11px', tableLayout: 'fixed' }}>
               <thead>
                 <tr style={{ background: 'var(--inset-bg)' }}>
-                  <SortableSourceHeader label="Source" sortKey="name" />
                   <SortableSourceHeader label="Status" sortKey="status" />
+                  <SortableSourceHeader label="Source" sortKey="name" />
                   <SortableSourceHeader label="Last Scraped" sortKey="lastScraped" />
                   <th style={{ padding: '8px', textAlign: 'right', fontWeight: 'bold', color: 'var(--foreground)' }}>Actions</th>
                 </tr>
@@ -1102,33 +1136,50 @@ export default function AdminDashboard() {
                   const totalGrants = sourceJobs.reduce((sum, job) => sum + job.discoveredCount, 0);
                   const hasGrants = latestJob && latestJob.grants && latestJob.grants.length > 0;
                   
+                  // Get status icon
+                  const getStatusIcon = (status: string) => {
+                    switch (status) {
+                      case 'PENDING':
+                        return 'schedule';
+                      case 'RUNNING':
+                        return 'sync';
+                      case 'COMPLETED':
+                        return 'check_circle';
+                      case 'FAILED':
+                        return 'error';
+                      default:
+                        return 'help_outline';
+                    }
+                  };
+                  
                   return (
                     <tr key={source.id} style={{ opacity: source.isActive ? 1 : 0.6 }}>
-                      <td style={{ padding: '8px' }}>
-                        <div style={{ fontWeight: 'bold', fontSize: '13px' }}>{source.name}</div>
-                        <div style={{ fontSize: '10px', color: 'var(--muted-foreground)', marginTop: '2px' }}>
-                          {source.url.length > 50 ? `${source.url.substring(0, 50)}...` : source.url}
-                        </div>
-                      </td>
-                      <td style={{ padding: '8px' }}>
-                        <span style={{
-                          padding: '2px 6px',
-                          fontSize: '10px',
-                          fontWeight: 'bold',
-                          background: statusStyle.bg,
-                          color: statusStyle.color,
-                          border: 'none',
-                          borderRadius: '4px',
-                          display: 'inline-block'
-                        }}>
-                          {displayStatus}
+                      <td style={{ padding: '8px', textAlign: 'center', whiteSpace: 'nowrap' }}>
+                        <span 
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            padding: '4px',
+                            fontSize: '18px',
+                            color: statusStyle.color,
+                            cursor: 'default'
+                          }}
+                          title={displayStatus}
+                        >
+                          <span className="material-icons" style={{ fontSize: '18px' }}>
+                            {getStatusIcon(displayStatus)}
+                          </span>
                         </span>
                       </td>
-                      <td style={{ padding: '8px', fontSize: '11px', color: 'var(--foreground)' }}>
+                      <td style={{ padding: '8px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '200px' }}>
+                        <div style={{ fontWeight: 'bold', fontSize: '13px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{source.name}</div>
+                      </td>
+                      <td style={{ padding: '8px', fontSize: '11px', color: 'var(--foreground)', whiteSpace: 'nowrap' }}>
                         {source.lastScraped ? format(new Date(source.lastScraped), 'MMM d, h:mm a') : 'Never'}
                       </td>
-                      <td style={{ padding: '8px', textAlign: 'right' }}>
-                        <div style={{ display: 'flex', gap: '4px', alignItems: 'center', justifyContent: 'flex-end' }}>
+                      <td style={{ padding: '8px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                        <div style={{ display: 'flex', gap: '4px', alignItems: 'center', justifyContent: 'flex-end', flexWrap: 'nowrap' }}>
                           {hasGrants && (
                             <button
                               onClick={() => setPreviewingGrantId(previewingGrantId === source.id ? null : source.id)}
