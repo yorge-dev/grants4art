@@ -638,8 +638,9 @@ export default function AdminDashboard() {
     </th>
   );
 
-  const SortableSourceHeader = ({ label, sortKey }: { label: string; sortKey: 'name' | 'status' | 'lastScraped' }) => (
+  const SortableSourceHeader = ({ label, sortKey, minWidth }: { label: string; sortKey: 'name' | 'status' | 'lastScraped'; minWidth?: string }) => (
     <th
+      className={sortKey === 'lastScraped' ? 'last-scraped-column' : ''}
       style={{
         padding: '8px',
         textAlign: sortKey === 'status' ? 'center' : 'left',
@@ -648,6 +649,7 @@ export default function AdminDashboard() {
         whiteSpace: 'nowrap',
         cursor: 'pointer',
         userSelect: 'none',
+        minWidth: minWidth || 'auto',
       }}
       onClick={() => handleSourceSort(sortKey)}
     >
@@ -903,13 +905,13 @@ export default function AdminDashboard() {
                       </td>
                     )}
                     {columnVisibility.organization && (
-                      <td className="compact-px compact-py" style={{ padding: '4px 6px', maxWidth: '150px' }}>
-                        <div style={{ fontSize: '11px', color: 'var(--foreground)' }}>{grant.organization}</div>
+                      <td className="compact-px compact-py" style={{ padding: '4px 6px', maxWidth: '150px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        <div style={{ fontSize: '11px', color: 'var(--foreground)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={grant.organization}>{grant.organization}</div>
                       </td>
                     )}
                     {columnVisibility.location && (
-                      <td className="compact-px compact-py" style={{ padding: '4px 6px', fontSize: '11px', color: 'var(--foreground)' }}>
-                        {grant.location}
+                      <td className="compact-px compact-py" style={{ padding: '4px 6px', fontSize: '11px', color: 'var(--foreground)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '120px' }}>
+                        <span title={grant.location}>{grant.location}</span>
                       </td>
                     )}
                     {columnVisibility.amountMin && (
@@ -1114,15 +1116,28 @@ export default function AdminDashboard() {
                 .sources-table .source-name {
                   max-width: 120px !important;
                 }
+                .sources-table .actions-column {
+                  min-width: 140px !important;
+                }
+                .sources-table .last-scraped-column {
+                  min-width: 100px !important;
+                }
+                .sources-table .actions-column button {
+                  padding: 3px 6px !important;
+                  font-size: 9px !important;
+                }
+                .sources-table .actions-column .material-icons {
+                  font-size: 12px !important;
+                }
               }
             `}</style>
-            <table className="sources-table" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0', fontSize: '11px', tableLayout: 'fixed' }}>
+            <table className="sources-table" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0', fontSize: '11px' }}>
               <thead>
                 <tr style={{ background: 'var(--inset-bg)' }}>
                   <SortableSourceHeader label="Status" sortKey="status" />
                   <SortableSourceHeader label="Source" sortKey="name" />
-                  <SortableSourceHeader label="Last Scraped" sortKey="lastScraped" />
-                  <th style={{ padding: '8px', textAlign: 'right', fontWeight: 'bold', color: 'var(--foreground)' }}>Actions</th>
+                  <SortableSourceHeader label="Last Scraped" sortKey="lastScraped" minWidth="120px" />
+                  <th className="actions-column" style={{ padding: '8px', textAlign: 'right', fontWeight: 'bold', color: 'var(--foreground)', whiteSpace: 'nowrap', minWidth: '160px' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -1175,11 +1190,11 @@ export default function AdminDashboard() {
                       <td style={{ padding: '8px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '200px' }}>
                         <div style={{ fontWeight: 'bold', fontSize: '13px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{source.name}</div>
                       </td>
-                      <td style={{ padding: '8px', fontSize: '11px', color: 'var(--foreground)', whiteSpace: 'nowrap' }}>
+                      <td className="last-scraped-column" style={{ padding: '8px', fontSize: '11px', color: 'var(--foreground)', whiteSpace: 'nowrap', minWidth: '120px' }}>
                         {source.lastScraped ? format(new Date(source.lastScraped), 'MMM d, h:mm a') : 'Never'}
                       </td>
-                      <td style={{ padding: '8px', textAlign: 'right', whiteSpace: 'nowrap' }}>
-                        <div style={{ display: 'flex', gap: '4px', alignItems: 'center', justifyContent: 'flex-end', flexWrap: 'nowrap' }}>
+                      <td className="actions-column" style={{ padding: '8px', textAlign: 'right', whiteSpace: 'nowrap', minWidth: '160px', overflow: 'visible' }}>
+                        <div style={{ display: 'flex', gap: '4px', alignItems: 'center', justifyContent: 'flex-end', flexWrap: 'nowrap', minWidth: 'fit-content' }}>
                           {hasGrants && (
                             <button
                               onClick={() => setPreviewingGrantId(previewingGrantId === source.id ? null : source.id)}
