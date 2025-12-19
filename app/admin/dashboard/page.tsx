@@ -650,97 +650,102 @@ export default function AdminDashboard() {
             </p>
           </div>
         ) : (
-          <div className="aol-box" style={{ overflow: 'auto', margin: '0 8px 32px 8px', position: 'relative' }}>
-            {/* Backdrop for closing dropdown */}
-            {showColumnSettings && (
-              <div
-                onClick={() => setShowColumnSettings(false)}
-                style={{
-                  position: 'fixed',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  zIndex: 15,
-                  background: 'transparent',
-                }}
-              />
-            )}
-            
-            {/* Column Settings Button */}
-            <div style={{ position: 'absolute', top: '8px', right: '8px', zIndex: 20 }}>
-              <button
-                onClick={() => setShowColumnSettings(!showColumnSettings)}
-                className="aol-button-secondary"
-                style={{
-                  padding: '4px 8px',
-                  fontSize: '12px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                }}
-                title="Column Settings"
-              >
-                <span className="material-icons" style={{ fontSize: '16px' }}>build</span>
-              </button>
-              
-              {/* Column Settings Dropdown */}
+          <div style={{ margin: '0 8px 32px 8px' }}>
+            {/* Table Header with Column Settings */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '8px', position: 'relative' }}>
+              {/* Backdrop for closing dropdown */}
               {showColumnSettings && (
                 <div
-                  ref={columnSettingsRef}
-                  className="aol-box-inset"
-                  onClick={(e) => e.stopPropagation()}
+                  onClick={() => setShowColumnSettings(false)}
                   style={{
-                    position: 'absolute',
-                    top: '100%',
-                    right: '0',
-                    marginTop: '4px',
-                    padding: '12px',
-                    minWidth: '200px',
-                    zIndex: 25,
-                    boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    zIndex: 15,
+                    background: 'transparent',
                   }}
-                >
-                  <div style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: 'var(--primary)' }}>
-                    Column Visibility
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    {[
-                      { key: 'title', label: 'Title' },
-                      { key: 'organization', label: 'Organization' },
-                      { key: 'location', label: 'Location' },
-                      { key: 'amountMin', label: 'Amount Min' },
-                      { key: 'amountMax', label: 'Amount Max' },
-                      { key: 'deadline', label: 'Deadline' },
-                      { key: 'applicationUrl', label: 'Application URL' },
-                      { key: 'category', label: 'Funding Source' },
-                      { key: 'tags', label: 'Tags' },
-                      { key: 'createdAt', label: 'Live Date' },
-                    ].map((col) => (
-                      <label
-                        key={col.key}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px',
-                          fontSize: '11px',
-                          cursor: 'pointer',
-                          userSelect: 'none',
-                        }}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={columnVisibility[col.key] ?? true}
-                          onChange={(e) => updateColumnVisibility(col.key, e.target.checked)}
-                          style={{ cursor: 'pointer' }}
-                        />
-                        <span>{col.label}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
+                />
               )}
+              
+              {/* Column Settings Button */}
+              <div style={{ position: 'relative', zIndex: 20 }}>
+                <button
+                  onClick={() => setShowColumnSettings(!showColumnSettings)}
+                  className="aol-button-secondary"
+                  style={{
+                    padding: '4px 8px',
+                    fontSize: '12px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                  }}
+                  title="Column Settings"
+                >
+                  <span className="material-icons" style={{ fontSize: '16px' }}>build</span>
+                </button>
+                
+                {/* Column Settings Dropdown */}
+                {showColumnSettings && (
+                  <div
+                    ref={columnSettingsRef}
+                    className="aol-box-inset"
+                    onClick={(e) => e.stopPropagation()}
+                    style={{
+                      position: 'absolute',
+                      top: '100%',
+                      right: '0',
+                      marginTop: '4px',
+                      padding: '12px',
+                      minWidth: '200px',
+                      zIndex: 25,
+                      boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
+                    }}
+                  >
+                    <div style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: 'var(--primary)' }}>
+                      Column Visibility
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      {[
+                        { key: 'title', label: 'Title' },
+                        { key: 'organization', label: 'Organization' },
+                        { key: 'location', label: 'Location' },
+                        { key: 'amountMin', label: 'Amount Min' },
+                        { key: 'amountMax', label: 'Amount Max' },
+                        { key: 'deadline', label: 'Deadline' },
+                        { key: 'applicationUrl', label: 'Application URL' },
+                        { key: 'category', label: 'Funding Source' },
+                        { key: 'tags', label: 'Tags' },
+                        { key: 'createdAt', label: 'Live Date' },
+                      ].map((col) => (
+                        <label
+                          key={col.key}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            fontSize: '11px',
+                            cursor: 'pointer',
+                            userSelect: 'none',
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={columnVisibility[col.key] ?? true}
+                            onChange={(e) => updateColumnVisibility(col.key, e.target.checked)}
+                            style={{ cursor: 'pointer' }}
+                          />
+                          <span>{col.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
+            
+            <div className="aol-box" style={{ overflow: 'auto' }}>
 
             <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0', fontSize: '11px', borderRadius: '8px', overflow: 'hidden' }}>
               <thead>
@@ -861,6 +866,7 @@ export default function AdminDashboard() {
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
         )}
 

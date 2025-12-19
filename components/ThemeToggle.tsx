@@ -119,7 +119,7 @@ export function ThemeToggle() {
             padding: '8px',
             minWidth: '160px',
             boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
-            zIndex: 1000
+            zIndex: 10000
           }}
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>

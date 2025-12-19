@@ -6,7 +6,7 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 
 export function AdminHeader() {
   return (
-    <div style={{ margin: '4px', padding: '4px', border: 'none' }}>
+    <div style={{ margin: '4px', padding: '4px', border: 'none', position: 'relative', zIndex: 100 }}>
       <div className="mx-auto" style={{ maxWidth: '1440px', padding: '0 16px' }}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2" style={{ gap: '4px' }}>
@@ -18,7 +18,9 @@ export function AdminHeader() {
               Sign Out
             </button>
           </div>
-          <ThemeToggle />
+          <div style={{ position: 'relative', zIndex: 1001 }}>
+            <ThemeToggle />
+          </div>
         </div>
       </div>
     </div>
