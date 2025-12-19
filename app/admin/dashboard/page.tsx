@@ -692,6 +692,292 @@ export default function AdminDashboard() {
           </p>
         </div>
 
+        {/* Add Source Form */}
+        <div style={{ margin: '0 8px 16px 8px' }}>
+          <style>{`
+            @media (max-width: 640px) {
+              .source-inputs-container {
+                flex-direction: column !important;
+              }
+              .source-inputs-container input {
+                width: 100% !important;
+                flex: 1 1 100% !important;
+              }
+            }
+          `}</style>
+          <form onSubmit={handleAddSource} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div className="source-inputs-container" style={{ 
+              display: 'flex', 
+              flexDirection: 'row',
+              gap: '8px',
+              flexWrap: 'wrap',
+              width: '100%',
+              boxSizing: 'border-box'
+            }}>
+              <input
+                type="text"
+                value={newSourceName}
+                onChange={(e) => setNewSourceName(e.target.value)}
+                placeholder="Source Name"
+                required
+                className="aol-input"
+                style={{ 
+                  flex: '1 1 150px',
+                  minWidth: '0',
+                  width: '100%',
+                  boxSizing: 'border-box'
+                }}
+              />
+              <input
+                type="url"
+                value={newSourceUrl}
+                onChange={(e) => setNewSourceUrl(e.target.value)}
+                placeholder="URL"
+                required
+                className="aol-input"
+                style={{ 
+                  flex: '2 1 200px',
+                  minWidth: '0',
+                  width: '100%',
+                  boxSizing: 'border-box'
+                }}
+              />
+              <button
+                type="submit"
+                disabled={addingSource}
+                style={{ 
+                  flexShrink: 0,
+                  background: 'var(--primary)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  padding: '6px 12px',
+                  fontSize: '12px',
+                  fontWeight: 'bold',
+                  cursor: addingSource ? 'not-allowed' : 'pointer',
+                  opacity: addingSource ? 0.6 : 1
+                }}
+              >
+                {addingSource ? 'Adding...' : 'Add Source'}
+              </button>
+            </div>
+          </form>
+        </div>
+
+        {/* Grant Preview Section */}
+        {previewingGrantId && (() => {
+          const source = sources.find(s => s.id === previewingGrantId);
+          if (!source) return null;
+          const sourceJobs = jobs.filter(job => job.grantSource?.name === source.name);
+          const latestJob = sourceJobs.find(job => job.grants && job.grants.length > 0);
+          if (!latestJob || !latestJob.grants || latestJob.grants.length === 0) return null;
+          
+          return (
+            <div style={{ margin: '0 8px 16px 8px' }}>
+              <h3 style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '12px', color: 'var(--primary)' }}>
+                Grant Preview: {source.name}
+              </h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {latestJob.grants.map((grant) => (
+                  <GrantPreviewCard key={grant.id} grant={grant} router={router} />
+                ))}
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* Combined Sources and Jobs Table */}
+        <div style={{ margin: '0 8px 32px 8px' }}>
+          <div className="aol-box" style={{ overflow: 'auto', padding: '16px' }}>
+            <h2 className="aol-heading compact-mb" style={{ fontSize: '16px', marginBottom: '12px' }}>
+              Grant Sources & Scrape Jobs
+            </h2>
+            <style>{`
+              @media (max-width: 768px) {
+                .sources-table {
+                  font-size: 10px !important;
+                }
+                .sources-table th,
+                .sources-table td {
+                  padding: 6px 4px !important;
+                }
+                .sources-table .source-name {
+                  max-width: 120px !important;
+                }
+                .sources-table .actions-column {
+                  min-width: 140px !important;
+                }
+                .sources-table .last-scraped-column {
+                  min-width: 100px !important;
+                }
+                .sources-table .actions-column button {
+                  padding: 3px 6px !important;
+                  font-size: 9px !important;
+                }
+                .sources-table .actions-column .material-icons {
+                  font-size: 12px !important;
+                }
+              }
+            `}</style>
+            <table className="sources-table" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0', fontSize: '11px' }}>
+              <thead>
+                <tr style={{ background: 'var(--inset-bg)' }}>
+                  <SortableSourceHeader label="Status" sortKey="status" />
+                  <SortableSourceHeader label="Source" sortKey="name" />
+                  <SortableSourceHeader label="Last Scraped" sortKey="lastScraped" minWidth="120px" />
+                  <th className="actions-column" style={{ padding: '8px', textAlign: 'right', fontWeight: 'bold', color: 'var(--foreground)', whiteSpace: 'nowrap', minWidth: '160px' }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sortedSources.map((source) => {
+                  // Find jobs for this source
+                  const sourceJobs = jobs.filter(job => job.grantSource?.name === source.name);
+                  const latestJob = sourceJobs.length > 0 ? sourceJobs[0] : null;
+                  const isFailed = latestJob && (latestJob.status === 'FAILED' || (latestJob.status === 'COMPLETED' && latestJob.discoveredCount === 0 && latestJob.errorMessage));
+                  const displayStatus = latestJob ? (isFailed ? 'FAILED' : latestJob.status) : 'PENDING';
+                  const statusStyle = getStatusBadge(displayStatus);
+                  const totalGrants = sourceJobs.reduce((sum, job) => sum + job.discoveredCount, 0);
+                  const hasGrants = latestJob && latestJob.grants && latestJob.grants.length > 0;
+                  
+                  // Get status icon
+                  const getStatusIcon = (status: string) => {
+                    switch (status) {
+                      case 'PENDING':
+                        return 'schedule';
+                      case 'RUNNING':
+                        return 'sync';
+                      case 'COMPLETED':
+                        return 'check_circle';
+                      case 'FAILED':
+                        return 'error';
+                      default:
+                        return 'help_outline';
+                    }
+                  };
+                  
+                  return (
+                    <tr key={source.id} style={{ opacity: source.isActive ? 1 : 0.6 }}>
+                      <td style={{ padding: '8px', textAlign: 'center', whiteSpace: 'nowrap' }}>
+                        <span 
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            padding: '4px',
+                            fontSize: '18px',
+                            color: statusStyle.color,
+                            cursor: 'default'
+                          }}
+                          title={displayStatus}
+                        >
+                          <span className="material-icons" style={{ fontSize: '18px' }}>
+                            {getStatusIcon(displayStatus)}
+                          </span>
+                        </span>
+                      </td>
+                      <td style={{ padding: '8px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '200px' }}>
+                        <div style={{ fontWeight: 'bold', fontSize: '13px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{source.name}</div>
+                      </td>
+                      <td className="last-scraped-column" style={{ padding: '8px', fontSize: '11px', color: 'var(--foreground)', whiteSpace: 'nowrap', minWidth: '120px' }}>
+                        {source.lastScraped ? format(new Date(source.lastScraped), 'MMM d, h:mm a') : 'Never'}
+                      </td>
+                      <td className="actions-column" style={{ padding: '8px', textAlign: 'right', whiteSpace: 'nowrap', minWidth: '160px', overflow: 'visible' }}>
+                        <div style={{ display: 'flex', gap: '4px', alignItems: 'center', justifyContent: 'flex-end', flexWrap: 'nowrap', minWidth: 'fit-content' }}>
+                          {hasGrants && (
+                            <button
+                              onClick={() => setPreviewingGrantId(previewingGrantId === source.id ? null : source.id)}
+                              style={{ 
+                                fontSize: '10px', 
+                                padding: '4px 8px',
+                                background: 'var(--secondary)',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontWeight: 'bold'
+                              }}
+                            >
+                              {previewingGrantId === source.id ? 'Hide' : 'Preview'}
+                            </button>
+                          )}
+                          <button
+                            onClick={() => handleScrapeSource(source.id)}
+                            disabled={scraping || !source.isActive}
+                            style={{ 
+                              fontSize: '11px', 
+                              padding: '4px 8px', 
+                              height: 'auto', 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              gap: '4px',
+                              background: 'var(--primary)',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '4px',
+                              cursor: scraping || !source.isActive ? 'not-allowed' : 'pointer',
+                              opacity: scraping || !source.isActive ? 0.6 : 1
+                            }}
+                            title="Run Scraper"
+                          >
+                            <span className="material-icons" style={{ fontSize: '14px' }}>rocket_launch</span>
+                          </button>
+                          <button
+                            onClick={() => handleToggleSource(source.id, source.isActive)}
+                            style={{ 
+                              fontSize: '11px', 
+                              padding: '4px 8px', 
+                              height: 'auto', 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              gap: '4px',
+                              background: 'var(--primary)',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '4px',
+                              cursor: 'pointer'
+                            }}
+                            title={source.isActive ? 'Disable' : 'Enable'}
+                          >
+                            <span className="material-icons" style={{ fontSize: '14px' }}>
+                              {source.isActive ? 'pause' : 'play_arrow'}
+                            </span>
+                          </button>
+                          <button
+                            onClick={() => handleDeleteSource(source.id)}
+                            style={{ 
+                              fontSize: '11px', 
+                              padding: '4px 8px', 
+                              height: 'auto', 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              gap: '4px', 
+                              color: 'white',
+                              background: '#d32f2f',
+                              border: 'none',
+                              borderRadius: '4px',
+                              cursor: 'pointer'
+                            }}
+                            title="Delete"
+                          >
+                            <span className="material-icons" style={{ fontSize: '14px' }}>delete</span>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+                {sortedSources.length === 0 && (
+                  <tr>
+                    <td colSpan={4} style={{ padding: '16px', textAlign: 'center', color: 'var(--muted-foreground)' }}>
+                      No sources configured.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
         {/* Search Bar Placeholder */}
         <div className="aol-box" style={{ margin: '0 8px 16px 8px', padding: '16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -1003,292 +1289,6 @@ export default function AdminDashboard() {
             </div>
           </div>
         )}
-
-        {/* Add Source Form */}
-        <div style={{ margin: '0 8px 16px 8px' }}>
-          <style>{`
-            @media (max-width: 640px) {
-              .source-inputs-container {
-                flex-direction: column !important;
-              }
-              .source-inputs-container input {
-                width: 100% !important;
-                flex: 1 1 100% !important;
-              }
-            }
-          `}</style>
-          <form onSubmit={handleAddSource} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <div className="source-inputs-container" style={{ 
-              display: 'flex', 
-              flexDirection: 'row',
-              gap: '8px',
-              flexWrap: 'wrap',
-              width: '100%',
-              boxSizing: 'border-box'
-            }}>
-              <input
-                type="text"
-                value={newSourceName}
-                onChange={(e) => setNewSourceName(e.target.value)}
-                placeholder="Source Name"
-                required
-                className="aol-input"
-                style={{ 
-                  flex: '1 1 150px',
-                  minWidth: '0',
-                  width: '100%',
-                  boxSizing: 'border-box'
-                }}
-              />
-              <input
-                type="url"
-                value={newSourceUrl}
-                onChange={(e) => setNewSourceUrl(e.target.value)}
-                placeholder="URL"
-                required
-                className="aol-input"
-                style={{ 
-                  flex: '2 1 200px',
-                  minWidth: '0',
-                  width: '100%',
-                  boxSizing: 'border-box'
-                }}
-              />
-              <button
-                type="submit"
-                disabled={addingSource}
-                style={{ 
-                  flexShrink: 0,
-                  background: 'var(--primary)',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  padding: '6px 12px',
-                  fontSize: '12px',
-                  fontWeight: 'bold',
-                  cursor: addingSource ? 'not-allowed' : 'pointer',
-                  opacity: addingSource ? 0.6 : 1
-                }}
-              >
-                {addingSource ? 'Adding...' : 'Add Source'}
-              </button>
-            </div>
-          </form>
-        </div>
-
-        {/* Grant Preview Section */}
-        {previewingGrantId && (() => {
-          const source = sources.find(s => s.id === previewingGrantId);
-          if (!source) return null;
-          const sourceJobs = jobs.filter(job => job.grantSource?.name === source.name);
-          const latestJob = sourceJobs.find(job => job.grants && job.grants.length > 0);
-          if (!latestJob || !latestJob.grants || latestJob.grants.length === 0) return null;
-          
-          return (
-            <div style={{ margin: '0 8px 16px 8px' }}>
-              <h3 style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '12px', color: 'var(--primary)' }}>
-                Grant Preview: {source.name}
-              </h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {latestJob.grants.map((grant) => (
-                  <GrantPreviewCard key={grant.id} grant={grant} router={router} />
-                ))}
-              </div>
-            </div>
-          );
-        })()}
-
-        {/* Combined Sources and Jobs Table */}
-        <div style={{ margin: '0 8px 32px 8px' }}>
-          <div className="aol-box" style={{ overflow: 'auto', padding: '16px' }}>
-            <h2 className="aol-heading compact-mb" style={{ fontSize: '16px', marginBottom: '12px' }}>
-              Grant Sources & Scrape Jobs
-            </h2>
-            <style>{`
-              @media (max-width: 768px) {
-                .sources-table {
-                  font-size: 10px !important;
-                }
-                .sources-table th,
-                .sources-table td {
-                  padding: 6px 4px !important;
-                }
-                .sources-table .source-name {
-                  max-width: 120px !important;
-                }
-                .sources-table .actions-column {
-                  min-width: 140px !important;
-                }
-                .sources-table .last-scraped-column {
-                  min-width: 100px !important;
-                }
-                .sources-table .actions-column button {
-                  padding: 3px 6px !important;
-                  font-size: 9px !important;
-                }
-                .sources-table .actions-column .material-icons {
-                  font-size: 12px !important;
-                }
-              }
-            `}</style>
-            <table className="sources-table" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0', fontSize: '11px' }}>
-              <thead>
-                <tr style={{ background: 'var(--inset-bg)' }}>
-                  <SortableSourceHeader label="Status" sortKey="status" />
-                  <SortableSourceHeader label="Source" sortKey="name" />
-                  <SortableSourceHeader label="Last Scraped" sortKey="lastScraped" minWidth="120px" />
-                  <th className="actions-column" style={{ padding: '8px', textAlign: 'right', fontWeight: 'bold', color: 'var(--foreground)', whiteSpace: 'nowrap', minWidth: '160px' }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sortedSources.map((source) => {
-                  // Find jobs for this source
-                  const sourceJobs = jobs.filter(job => job.grantSource?.name === source.name);
-                  const latestJob = sourceJobs.length > 0 ? sourceJobs[0] : null;
-                  const isFailed = latestJob && (latestJob.status === 'FAILED' || (latestJob.status === 'COMPLETED' && latestJob.discoveredCount === 0 && latestJob.errorMessage));
-                  const displayStatus = latestJob ? (isFailed ? 'FAILED' : latestJob.status) : 'PENDING';
-                  const statusStyle = getStatusBadge(displayStatus);
-                  const totalGrants = sourceJobs.reduce((sum, job) => sum + job.discoveredCount, 0);
-                  const hasGrants = latestJob && latestJob.grants && latestJob.grants.length > 0;
-                  
-                  // Get status icon
-                  const getStatusIcon = (status: string) => {
-                    switch (status) {
-                      case 'PENDING':
-                        return 'schedule';
-                      case 'RUNNING':
-                        return 'sync';
-                      case 'COMPLETED':
-                        return 'check_circle';
-                      case 'FAILED':
-                        return 'error';
-                      default:
-                        return 'help_outline';
-                    }
-                  };
-                  
-                  return (
-                    <tr key={source.id} style={{ opacity: source.isActive ? 1 : 0.6 }}>
-                      <td style={{ padding: '8px', textAlign: 'center', whiteSpace: 'nowrap' }}>
-                        <span 
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            padding: '4px',
-                            fontSize: '18px',
-                            color: statusStyle.color,
-                            cursor: 'default'
-                          }}
-                          title={displayStatus}
-                        >
-                          <span className="material-icons" style={{ fontSize: '18px' }}>
-                            {getStatusIcon(displayStatus)}
-                          </span>
-                        </span>
-                      </td>
-                      <td style={{ padding: '8px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '200px' }}>
-                        <div style={{ fontWeight: 'bold', fontSize: '13px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{source.name}</div>
-                      </td>
-                      <td className="last-scraped-column" style={{ padding: '8px', fontSize: '11px', color: 'var(--foreground)', whiteSpace: 'nowrap', minWidth: '120px' }}>
-                        {source.lastScraped ? format(new Date(source.lastScraped), 'MMM d, h:mm a') : 'Never'}
-                      </td>
-                      <td className="actions-column" style={{ padding: '8px', textAlign: 'right', whiteSpace: 'nowrap', minWidth: '160px', overflow: 'visible' }}>
-                        <div style={{ display: 'flex', gap: '4px', alignItems: 'center', justifyContent: 'flex-end', flexWrap: 'nowrap', minWidth: 'fit-content' }}>
-                          {hasGrants && (
-                            <button
-                              onClick={() => setPreviewingGrantId(previewingGrantId === source.id ? null : source.id)}
-                              style={{ 
-                                fontSize: '10px', 
-                                padding: '4px 8px',
-                                background: 'var(--secondary)',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '4px',
-                                cursor: 'pointer',
-                                fontWeight: 'bold'
-                              }}
-                            >
-                              {previewingGrantId === source.id ? 'Hide' : 'Preview'}
-                            </button>
-                          )}
-                          <button
-                            onClick={() => handleScrapeSource(source.id)}
-                            disabled={scraping || !source.isActive}
-                            style={{ 
-                              fontSize: '11px', 
-                              padding: '4px 8px', 
-                              height: 'auto', 
-                              display: 'flex', 
-                              alignItems: 'center', 
-                              gap: '4px',
-                              background: 'var(--primary)',
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: '4px',
-                              cursor: scraping || !source.isActive ? 'not-allowed' : 'pointer',
-                              opacity: scraping || !source.isActive ? 0.6 : 1
-                            }}
-                            title="Run Scraper"
-                          >
-                            <span className="material-icons" style={{ fontSize: '14px' }}>rocket_launch</span>
-                          </button>
-                          <button
-                            onClick={() => handleToggleSource(source.id, source.isActive)}
-                            style={{ 
-                              fontSize: '11px', 
-                              padding: '4px 8px', 
-                              height: 'auto', 
-                              display: 'flex', 
-                              alignItems: 'center', 
-                              gap: '4px',
-                              background: 'var(--primary)',
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: '4px',
-                              cursor: 'pointer'
-                            }}
-                            title={source.isActive ? 'Disable' : 'Enable'}
-                          >
-                            <span className="material-icons" style={{ fontSize: '14px' }}>
-                              {source.isActive ? 'pause' : 'play_arrow'}
-                            </span>
-                          </button>
-                          <button
-                            onClick={() => handleDeleteSource(source.id)}
-                            style={{ 
-                              fontSize: '11px', 
-                              padding: '4px 8px', 
-                              height: 'auto', 
-                              display: 'flex', 
-                              alignItems: 'center', 
-                              gap: '4px', 
-                              color: 'white',
-                              background: '#d32f2f',
-                              border: 'none',
-                              borderRadius: '4px',
-                              cursor: 'pointer'
-                            }}
-                            title="Delete"
-                          >
-                            <span className="material-icons" style={{ fontSize: '14px' }}>delete</span>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-                {sortedSources.length === 0 && (
-                  <tr>
-                    <td colSpan={4} style={{ padding: '16px', textAlign: 'center', color: 'var(--muted-foreground)' }}>
-                      No sources configured.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
       </main>
     </div>
   );
