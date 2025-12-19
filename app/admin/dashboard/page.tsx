@@ -452,6 +452,20 @@ export default function AdminDashboard() {
     setSortConfig({ key, direction });
   };
 
+  // Sources Table Sorting
+  const [sourceSortConfig, setSourceSortConfig] = useState<{ key: 'name' | 'status' | 'lastScraped' | null; direction: 'asc' | 'desc' }>({
+    key: null,
+    direction: 'asc',
+  });
+
+  const handleSourceSort = (key: 'name' | 'status' | 'lastScraped') => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (sourceSortConfig.key === key && sourceSortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSourceSortConfig({ key, direction });
+  };
+
   const sortedGrants = [...pendingGrants].sort((a, b) => {
     if (!sortConfig.key) return 0;
 
@@ -464,6 +478,36 @@ export default function AdminDashboard() {
 
     const compareResult = aValue < bValue ? -1 : 1;
     return sortConfig.direction === 'asc' ? compareResult : -compareResult;
+  });
+
+  // Sort sources
+  const sortedSources = [...sources].sort((a, b) => {
+    if (!sourceSortConfig.key) return 0;
+
+    if (sourceSortConfig.key === 'name') {
+      const compareResult = a.name.localeCompare(b.name);
+      return sourceSortConfig.direction === 'asc' ? compareResult : -compareResult;
+    }
+
+    if (sourceSortConfig.key === 'status') {
+      const aJobs = jobs.filter(job => job.grantSource?.name === a.name);
+      const bJobs = jobs.filter(job => job.grantSource?.name === b.name);
+      const aLatestJob = aJobs.length > 0 ? aJobs[0] : null;
+      const bLatestJob = bJobs.length > 0 ? bJobs[0] : null;
+      const aStatus = aLatestJob ? (aLatestJob.status === 'FAILED' || (aLatestJob.status === 'COMPLETED' && aLatestJob.discoveredCount === 0 && aLatestJob.errorMessage) ? 'FAILED' : aLatestJob.status) : 'PENDING';
+      const bStatus = bLatestJob ? (bLatestJob.status === 'FAILED' || (bLatestJob.status === 'COMPLETED' && bLatestJob.discoveredCount === 0 && bLatestJob.errorMessage) ? 'FAILED' : bLatestJob.status) : 'PENDING';
+      const compareResult = aStatus.localeCompare(bStatus);
+      return sourceSortConfig.direction === 'asc' ? compareResult : -compareResult;
+    }
+
+    if (sourceSortConfig.key === 'lastScraped') {
+      const aDate = a.lastScraped ? new Date(a.lastScraped).getTime() : 0;
+      const bDate = b.lastScraped ? new Date(b.lastScraped).getTime() : 0;
+      const compareResult = aDate - bDate;
+      return sourceSortConfig.direction === 'asc' ? compareResult : -compareResult;
+    }
+
+    return 0;
   });
 
   // Scraper Handlers
@@ -592,6 +636,30 @@ export default function AdminDashboard() {
     </th>
   );
 
+  const SortableSourceHeader = ({ label, sortKey }: { label: string; sortKey: 'name' | 'status' | 'lastScraped' }) => (
+    <th
+      style={{
+        padding: '8px',
+        textAlign: 'left',
+        fontWeight: 'bold',
+        color: 'var(--foreground)',
+        whiteSpace: 'nowrap',
+        cursor: 'pointer',
+        userSelect: 'none',
+      }}
+      onClick={() => handleSourceSort(sortKey)}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+        {label}
+        {sourceSortConfig.key === sortKey && (
+          <span style={{ fontSize: '10px' }}>
+            {sourceSortConfig.direction === 'asc' ? '▲' : '▼'}
+          </span>
+        )}
+      </div>
+    </th>
+  );
+
   if (status === 'loading' || loading) {
     return (
       <div className="min-h-screen" style={{ background: 'var(--background)' }}>
@@ -672,13 +740,18 @@ export default function AdminDashboard() {
               <div style={{ position: 'relative', zIndex: 20 }}>
                 <button
                   onClick={() => setShowColumnSettings(!showColumnSettings)}
-                  className="aol-button-secondary"
                   style={{
                     padding: '4px 8px',
                     fontSize: '12px',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '4px',
+                    background: 'var(--secondary)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    fontWeight: 'bold'
                   }}
                   title="Column Settings"
                 >
@@ -778,8 +851,17 @@ export default function AdminDashboard() {
                     <td className="compact-px compact-py" style={{ padding: '4px 6px', textAlign: 'right' }}>
                       <button
                         onClick={() => router.push(`/admin/grants/${grant.id}`)}
-                        className="aol-button-secondary"
-                        style={{ textDecoration: 'none', fontSize: '10px', padding: '2px 6px' }}
+                        style={{ 
+                          textDecoration: 'none', 
+                          fontSize: '10px', 
+                          padding: '4px 8px',
+                          background: 'var(--secondary)',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontWeight: 'bold'
+                        }}
                       >
                         Edit
                       </button>
@@ -922,14 +1004,46 @@ export default function AdminDashboard() {
               <button
                 type="submit"
                 disabled={addingSource}
-                className="aol-button"
-                style={{ flexShrink: 0 }}
+                style={{ 
+                  flexShrink: 0,
+                  background: 'var(--primary)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  padding: '6px 12px',
+                  fontSize: '12px',
+                  fontWeight: 'bold',
+                  cursor: addingSource ? 'not-allowed' : 'pointer',
+                  opacity: addingSource ? 0.6 : 1
+                }}
               >
                 {addingSource ? 'Adding...' : 'Add Source'}
               </button>
             </div>
           </form>
         </div>
+
+        {/* Grant Preview Section */}
+        {previewingGrantId && (() => {
+          const source = sources.find(s => s.id === previewingGrantId);
+          if (!source) return null;
+          const sourceJobs = jobs.filter(job => job.grantSource?.name === source.name);
+          const latestJob = sourceJobs.find(job => job.grants && job.grants.length > 0);
+          if (!latestJob || !latestJob.grants || latestJob.grants.length === 0) return null;
+          
+          return (
+            <div style={{ margin: '0 8px 16px 8px' }}>
+              <h3 style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '12px', color: 'var(--primary)' }}>
+                Grant Preview: {source.name}
+              </h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {latestJob.grants.map((grant) => (
+                  <GrantPreviewCard key={grant.id} grant={grant} router={router} />
+                ))}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Combined Sources and Jobs Table */}
         <div style={{ margin: '0 8px 32px 8px' }}>
@@ -940,15 +1054,14 @@ export default function AdminDashboard() {
             <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0', fontSize: '11px' }}>
               <thead>
                 <tr style={{ background: 'var(--inset-bg)' }}>
-                  <th style={{ padding: '8px', textAlign: 'left', fontWeight: 'bold', color: 'var(--foreground)' }}>Source</th>
-                  <th style={{ padding: '8px', textAlign: 'left', fontWeight: 'bold', color: 'var(--foreground)' }}>Status</th>
-                  <th style={{ padding: '8px', textAlign: 'left', fontWeight: 'bold', color: 'var(--foreground)' }}>Last Scraped</th>
-                  <th style={{ padding: '8px', textAlign: 'left', fontWeight: 'bold', color: 'var(--foreground)' }}>Grants</th>
+                  <SortableSourceHeader label="Source" sortKey="name" />
+                  <SortableSourceHeader label="Status" sortKey="status" />
+                  <SortableSourceHeader label="Last Scraped" sortKey="lastScraped" />
                   <th style={{ padding: '8px', textAlign: 'right', fontWeight: 'bold', color: 'var(--foreground)' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {sources.map((source) => {
+                {sortedSources.map((source) => {
                   // Find jobs for this source
                   const sourceJobs = jobs.filter(job => job.grantSource?.name === source.name);
                   const latestJob = sourceJobs.length > 0 ? sourceJobs[0] : null;
@@ -956,6 +1069,7 @@ export default function AdminDashboard() {
                   const displayStatus = latestJob ? (isFailed ? 'FAILED' : latestJob.status) : 'PENDING';
                   const statusStyle = getStatusBadge(displayStatus);
                   const totalGrants = sourceJobs.reduce((sum, job) => sum + job.discoveredCount, 0);
+                  const hasGrants = latestJob && latestJob.grants && latestJob.grants.length > 0;
                   
                   return (
                     <tr key={source.id} style={{ opacity: source.isActive ? 1 : 0.6 }}>
@@ -982,37 +1096,61 @@ export default function AdminDashboard() {
                       <td style={{ padding: '8px', fontSize: '11px', color: 'var(--foreground)' }}>
                         {source.lastScraped ? format(new Date(source.lastScraped), 'MMM d, h:mm a') : 'Never'}
                       </td>
-                      <td style={{ padding: '8px', fontSize: '11px', color: 'var(--foreground)' }}>
-                        {totalGrants > 0 ? (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <span>{totalGrants}</span>
-                            {latestJob && latestJob.grants && latestJob.grants.length > 0 && (
-                              <button
-                                onClick={() => setPreviewingGrantId(previewingGrantId === source.id ? null : source.id)}
-                                className="aol-button-secondary"
-                                style={{ fontSize: '10px', padding: '2px 6px' }}
-                              >
-                                {previewingGrantId === source.id ? 'Hide' : 'Preview'}
-                              </button>
-                            )}
-                          </div>
-                        ) : '-'}
-                      </td>
                       <td style={{ padding: '8px', textAlign: 'right' }}>
                         <div style={{ display: 'flex', gap: '4px', alignItems: 'center', justifyContent: 'flex-end' }}>
+                          {hasGrants && (
+                            <button
+                              onClick={() => setPreviewingGrantId(previewingGrantId === source.id ? null : source.id)}
+                              style={{ 
+                                fontSize: '10px', 
+                                padding: '4px 8px',
+                                background: 'var(--secondary)',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontWeight: 'bold'
+                              }}
+                            >
+                              {previewingGrantId === source.id ? 'Hide' : 'Preview'}
+                            </button>
+                          )}
                           <button
                             onClick={() => handleScrapeSource(source.id)}
                             disabled={scraping || !source.isActive}
-                            className="aol-button"
-                            style={{ fontSize: '11px', padding: '2px 8px', height: 'auto', display: 'flex', alignItems: 'center', gap: '4px' }}
+                            style={{ 
+                              fontSize: '11px', 
+                              padding: '4px 8px', 
+                              height: 'auto', 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              gap: '4px',
+                              background: 'var(--primary)',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '4px',
+                              cursor: scraping || !source.isActive ? 'not-allowed' : 'pointer',
+                              opacity: scraping || !source.isActive ? 0.6 : 1
+                            }}
                             title="Run Scraper"
                           >
                             <span className="material-icons" style={{ fontSize: '14px' }}>rocket_launch</span>
                           </button>
                           <button
                             onClick={() => handleToggleSource(source.id, source.isActive)}
-                            className="aol-button"
-                            style={{ fontSize: '11px', padding: '2px 8px', height: 'auto', display: 'flex', alignItems: 'center', gap: '4px' }}
+                            style={{ 
+                              fontSize: '11px', 
+                              padding: '4px 8px', 
+                              height: 'auto', 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              gap: '4px',
+                              background: 'var(--primary)',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '4px',
+                              cursor: 'pointer'
+                            }}
                             title={source.isActive ? 'Disable' : 'Enable'}
                           >
                             <span className="material-icons" style={{ fontSize: '14px' }}>
@@ -1021,8 +1159,19 @@ export default function AdminDashboard() {
                           </button>
                           <button
                             onClick={() => handleDeleteSource(source.id)}
-                            className="aol-button"
-                            style={{ fontSize: '11px', padding: '2px 8px', height: 'auto', display: 'flex', alignItems: 'center', gap: '4px', color: 'red' }}
+                            style={{ 
+                              fontSize: '11px', 
+                              padding: '4px 8px', 
+                              height: 'auto', 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              gap: '4px', 
+                              color: 'white',
+                              background: '#d32f2f',
+                              border: 'none',
+                              borderRadius: '4px',
+                              cursor: 'pointer'
+                            }}
                             title="Delete"
                           >
                             <span className="material-icons" style={{ fontSize: '14px' }}>delete</span>
@@ -1032,37 +1181,15 @@ export default function AdminDashboard() {
                     </tr>
                   );
                 })}
-                {sources.length === 0 && (
+                {sortedSources.length === 0 && (
                   <tr>
-                    <td colSpan={5} style={{ padding: '16px', textAlign: 'center', color: 'var(--muted-foreground)' }}>
+                    <td colSpan={4} style={{ padding: '16px', textAlign: 'center', color: 'var(--muted-foreground)' }}>
                       No sources configured.
                     </td>
                   </tr>
                 )}
               </tbody>
             </table>
-            
-            {/* Grant Preview Section */}
-            {previewingGrantId && (() => {
-              const source = sources.find(s => s.id === previewingGrantId);
-              if (!source) return null;
-              const sourceJobs = jobs.filter(job => job.grantSource?.name === source.name);
-              const latestJob = sourceJobs.find(job => job.grants && job.grants.length > 0);
-              if (!latestJob || !latestJob.grants || latestJob.grants.length === 0) return null;
-              
-              return (
-                <div style={{ marginTop: '16px', paddingTop: '16px' }}>
-                  <h3 style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '12px', color: 'var(--primary)' }}>
-                    Grant Preview: {source.name}
-                  </h3>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    {latestJob.grants.map((grant) => (
-                      <GrantPreviewCard key={grant.id} grant={grant} router={router} />
-                    ))}
-                  </div>
-                </div>
-              );
-            })()}
           </div>
         </div>
       </main>
