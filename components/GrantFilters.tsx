@@ -125,11 +125,8 @@ export function GrantFilters({ onFilterChange }: GrantFiltersProps) {
   return (
     <div className="aol-box" style={{ 
       width: '100%',
-      maxWidth: '100%',
       padding: '16px',
-      height: 'fit-content',
-      boxSizing: 'border-box',
-      overflow: 'hidden'
+      height: 'fit-content'
     }}>
       <h2 className="aol-heading" style={{ fontSize: '16px', marginBottom: '16px', marginTop: 0 }}>
         Filters

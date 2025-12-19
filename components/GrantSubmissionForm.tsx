@@ -92,11 +92,8 @@ export function GrantSubmissionForm() {
   return (
     <div className="aol-box" style={{ 
       width: '100%',
-      maxWidth: '100%',
       padding: '16px',
-      height: 'fit-content',
-      boxSizing: 'border-box',
-      overflow: 'hidden'
+      height: 'fit-content'
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
         <h2 className="aol-heading" style={{ fontSize: '16px', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -145,7 +142,7 @@ export function GrantSubmissionForm() {
       </div>
 
       {isExpanded && (
-        <form onSubmit={(e) => { e.preventDefault(); }} style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
+        <form onSubmit={(e) => { e.preventDefault(); }} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {/* Honeypot field (hidden) */}
           <input
             type="text"

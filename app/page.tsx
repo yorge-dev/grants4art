@@ -227,29 +227,25 @@ export default function Home() {
         }} className="flex-col md:flex-row">
           {/* Sidebar Filters */}
           <aside style={{ 
-            flexShrink: 0,
-            width: '100%'
-          }} className="w-full md:w-[240px]">
+            flexShrink: 0
+          }} className="w-full md:w-auto">
             <div style={{ 
               position: 'sticky', 
               top: '20px',
               display: 'flex',
-              flexDirection: 'column',
-              width: '100%',
-              maxWidth: '100%',
-              boxSizing: 'border-box'
-            }}>
+              flexDirection: 'column'
+            }} className="w-full md:max-w-[240px]">
               <GrantFilters 
                 onFilterChange={handleFilterChange}
               />
-              <div style={{ marginTop: '24px', width: '100%' }}>
+              <div style={{ marginTop: '24px' }}>
                 <GrantSubmissionForm />
               </div>
             </div>
           </aside>
 
           {/* Grants List */}
-          <div style={{ flex: 1, minWidth: 0, width: '100%' }} className="w-full md:w-auto">
+          <div style={{ flex: 1, minWidth: 0 }} className="w-full md:w-auto">
             {/* Grants Grid */}
             {loading ? (
               <div className="text-center aol-box-inset" style={{ padding: '32px', margin: '0 8px 24px 8px' }}>
