@@ -1,4 +1,4 @@
-# Texas Art Grants
+# Grants 4 Art
 
 A full-stack grants aggregation website for designers and artists based on a user's location, featuring AI-powered automated grant discovery, admin review workflow, and a clean public interface.
 
@@ -78,7 +78,7 @@ For detailed instructions including Git installation, see [GITHUB_SETUP.md](GITH
 1. Clone the repository:
 
 ```bash
-cd txartgrants
+cd grants4art
 ```
 
 2. Install dependencies:
