@@ -1,4 +1,4 @@
-# Texas Art Grants - Project Summary
+# Grants4Art - Project Summary
 
 ## Overview
 
