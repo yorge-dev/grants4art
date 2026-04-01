@@ -24,6 +24,7 @@ export function useRealtimeGrants(options: UseRealtimeGrantsOptions = {}) {
 
   const subscribe = useCallback(() => {
     if (subscribedRef.current) return;
+    if (!supabase) return;
     subscribedRef.current = true;
 
     const channel = supabase
@@ -49,7 +50,7 @@ export function useRealtimeGrants(options: UseRealtimeGrantsOptions = {}) {
   }, [options]);
 
   const unsubscribe = useCallback(() => {
-    if (channelRef.current) {
+    if (channelRef.current && supabase) {
       supabase.removeChannel(channelRef.current);
       channelRef.current = null;
     }
