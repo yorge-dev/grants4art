@@ -10,6 +10,7 @@ import { GrantSubmissionForm } from '@/components/GrantSubmissionForm';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { HeroSearch } from '@/components/HeroSearch';
 import { VersionPatchNotes } from '@/components/VersionPatchNotes';
+import { useRealtimeGrants } from '@/lib/useRealtimeGrants';
 
 interface Grant {
   id: string;
@@ -51,13 +52,17 @@ export default function Home() {
 
   const prevFiltersRef = useRef(filters);
   const mountedRef = useRef(false);
+  const filtersRef = useRef(filters);
+  const paginationRef = useRef(pagination);
+  filtersRef.current = filters;
+  paginationRef.current = pagination;
 
   const fetchGrants = useCallback(async (currentFilters = filters, currentPage = pagination.page) => {
     setLoading(true);
     try {
       const params = new URLSearchParams({
         page: currentPage.toString(),
-        limit: '10',
+        limit: '25',
         ...(currentFilters.search && { search: currentFilters.search }),
         ...(currentFilters.categories.length > 0 && { categories: currentFilters.categories.join(',') })
       });
@@ -91,11 +96,22 @@ export default function Home() {
     }
   }, []);
 
-  // Fetch on initial mount
+  const refetchCurrent = useCallback(() => {
+    fetchGrants(filtersRef.current, paginationRef.current.page);
+  }, [fetchGrants]);
+
+  const { subscribe, unsubscribe } = useRealtimeGrants({
+    onInsert: refetchCurrent,
+    onUpdate: refetchCurrent,
+    onDelete: refetchCurrent,
+  });
+
+  // Fetch on initial mount and start realtime subscription
   if (!mountedRef.current) {
     mountedRef.current = true;
     setTimeout(() => {
       fetchGrants(filters, pagination.page);
+      subscribe();
     }, 0);
   }
 
@@ -196,7 +212,7 @@ export default function Home() {
                 e.currentTarget.style.opacity = '0.7';
               }}
             >
-              Version 0.0.1
+              Version 0.0.2
             </a>
           </div>
           <div style={{ flexShrink: 0 }}>

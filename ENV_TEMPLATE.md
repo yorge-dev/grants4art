@@ -18,6 +18,10 @@ NEXTAUTH_SECRET="your-nextauth-secret-here-change-in-production"
 # Admin
 ADMIN_EMAIL="your-admin-email@example.com"
 ADMIN_PASSWORD="your-secure-password-here"
+
+# Supabase (for Realtime)
+NEXT_PUBLIC_SUPABASE_URL="https://your-project.supabase.co"
+NEXT_PUBLIC_SUPABASE_ANON_KEY="your-anon-key"
 ```
 
 ## .env (for Prisma)

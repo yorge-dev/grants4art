@@ -12,13 +12,14 @@ interface PatchNote {
 const PATCH_NOTES: PatchNote[] = [
   {
     version: '0.0.2',
-    date: '01/07/2026',
-    comingSoon: true,
+    date: '03/18/2026',
+    comingSoon: false,
     notes: [
-      'Additional locations (Houston, San Antonio, Dallas, El Paso)',
-      'Grant submission form',
-      'Grant Eligibility and Description styling optimizations',
-      'Bug fixes and stability improvements',
+      'Full grants list: 25 grants per page (up from 10)',
+      '"Applications Closed" label replaces "Expired" for past-deadline grants',
+      'Gemini API overhaul: cost-effective calls, improved summarization and formatting',
+      'Admin dashboard overhaul: component structure, layout, and UX polish',
+      'Library updates including migration to @google/genai SDK',
     ],
   },
   {

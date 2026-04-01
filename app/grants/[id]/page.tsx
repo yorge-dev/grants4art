@@ -114,7 +114,7 @@ export default async function GrantDetailPage({ params }: { params: Promise<{ id
                   <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                     {isExpired ? (
                       <>
-                        <span className="material-icons" style={{ fontSize: '16px' }}>warning</span> Expired - 
+                        <span className="material-icons" style={{ fontSize: '16px' }}>warning</span> Applications Closed - 
                       </>
                     ) : (
                       <span className="material-icons" style={{ fontSize: '16px' }}>calendar_today</span>

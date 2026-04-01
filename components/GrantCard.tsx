@@ -364,7 +364,7 @@ export function GrantCard({ grant, isLocked = false, onLock, onUnlock }: GrantCa
           )}
           {deadline && (
             <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px', fontWeight: 'bold', color: isExpired ? '#d32f2f' : 'var(--foreground)', fontSize: '10px', textAlign: 'right' }}>
-              <span className="material-icons" style={{ fontSize: '12px', verticalAlign: 'middle' }}>calendar_today</span> {isExpired ? 'Expired' : `Due in ${formatDistanceToNow(deadline)}`}
+              <span className="material-icons" style={{ fontSize: '12px', verticalAlign: 'middle' }}>calendar_today</span> {isExpired ? 'Applications Closed' : `Due in ${formatDistanceToNow(deadline)}`}
             </span>
           )}
         </div>

@@ -1,64 +1,15 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { format, isValid, formatDistanceToNow } from 'date-fns';
+import { format, isValid } from 'date-fns';
 import { AdminGrantSubmissionForm } from '@/components/AdminGrantSubmissionForm';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
-import { formatTagName } from '@/lib/tag-utils';
-
-interface GrantTooltipProps {
-  description: string;
-  eligibility?: string | null;
-  isVisible: boolean;
-}
-
-function GrantTooltip({ description, eligibility, isVisible }: GrantTooltipProps) {
-  return (
-    <div
-      className="grant-tooltip"
-      style={{
-        marginTop: '12px',
-        padding: isVisible ? '16px' : '0 16px',
-        background: 'var(--text-field-bg)',
-        border: 'none',
-        borderRadius: '8px',
-        opacity: isVisible ? 1 : 0,
-        maxHeight: isVisible ? '600px' : '0',
-        overflowY: isVisible ? 'auto' : 'hidden',
-        overflowX: 'hidden',
-        transition: 'opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-        visibility: isVisible ? 'visible' : 'hidden',
-        scrollbarWidth: 'none',
-        msOverflowStyle: 'none',
-        userSelect: 'none',
-        WebkitUserSelect: 'none',
-        MozUserSelect: 'none',
-        msUserSelect: 'none',
-      }}
-    >
-      <div style={{ marginBottom: eligibility ? '12px' : '0' }}>
-        <h4 style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--primary)', marginBottom: '8px', userSelect: 'none', WebkitUserSelect: 'none', MozUserSelect: 'none', msUserSelect: 'none' }}>
-          Description
-        </h4>
-        <p style={{ fontSize: '12px', color: 'var(--foreground)', lineHeight: '1.4', margin: 0, whiteSpace: 'pre-wrap', userSelect: 'none', WebkitUserSelect: 'none', MozUserSelect: 'none', msUserSelect: 'none' }}>
-          {description}
-        </p>
-      </div>
-      {eligibility && (
-        <div>
-          <h4 style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--primary)', marginBottom: '8px', userSelect: 'none', WebkitUserSelect: 'none', MozUserSelect: 'none', msUserSelect: 'none' }}>
-            Eligibility
-          </h4>
-          <p style={{ fontSize: '12px', color: 'var(--foreground)', lineHeight: '1.4', margin: 0, whiteSpace: 'pre-wrap', userSelect: 'none', WebkitUserSelect: 'none', MozUserSelect: 'none', msUserSelect: 'none' }}>
-            {eligibility}
-          </p>
-        </div>
-      )}
-    </div>
-  );
-}
+import { AdminAddSourceForm } from '@/components/admin/AdminAddSourceForm';
+import { AdminSourcesTable } from '@/components/admin/AdminSourcesTable';
+import { AdminGrantPreviewCard } from '@/components/admin/AdminGrantPreviewCard';
+import { AdminToast, type AdminToastMessage } from '@/components/admin/AdminToast';
 
 interface Grant {
   id: string;
@@ -131,203 +82,6 @@ const formatSafeDate = (dateValue: Date | string | null | undefined, formatStrin
   return isValid(date) ? format(date, formatString) : 'Invalid Date';
 };
 
-const formatGrantAmount = (grant: ScrapeJob['grants'][0]) => {
-  if (grant.amountMin !== null && grant.amountMin !== undefined && grant.amountMax !== null && grant.amountMax !== undefined) {
-    if (grant.amountMin === grant.amountMax) {
-      return `$${grant.amountMin.toLocaleString()}`;
-    }
-    return `$${grant.amountMin.toLocaleString()} - $${grant.amountMax.toLocaleString()}`;
-  } else if (grant.amountMax !== null && grant.amountMax !== undefined) {
-    return `Up to $${grant.amountMax.toLocaleString()}`;
-  } else if (grant.amountMin !== null && grant.amountMin !== undefined) {
-    return `From $${grant.amountMin.toLocaleString()}`;
-  } else if (grant.amount) {
-    return grant.amount;
-  }
-  return null;
-};
-
-interface GrantPreviewCardProps {
-  grant: ScrapeJob['grants'][0];
-  router: ReturnType<typeof useRouter>;
-}
-
-function GrantPreviewCard({ grant, router }: GrantPreviewCardProps) {
-  const [showTooltip, setShowTooltip] = useState(false);
-  const hideTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const deadline = grant.deadline ? new Date(grant.deadline) : null;
-  const isExpired = deadline && deadline < new Date();
-  const displayAmount = formatGrantAmount(grant);
-
-  const handleMouseEnter = () => {
-    // Clear any pending hide timeout
-    if (hideTimeoutRef.current) {
-      clearTimeout(hideTimeoutRef.current);
-      hideTimeoutRef.current = null;
-    }
-    setShowTooltip(true);
-  };
-
-  const handleMouseLeave = () => {
-    // Add a small delay before hiding to prevent flickering when moving between cards
-    if (hideTimeoutRef.current) {
-      clearTimeout(hideTimeoutRef.current);
-    }
-    hideTimeoutRef.current = setTimeout(() => {
-      setShowTooltip(false);
-      hideTimeoutRef.current = null;
-    }, 150); // 150ms delay
-  };
-
-  const tooltipVisible = showTooltip;
-
-  return (
-    <div
-      className="aol-box block grant-card"
-      onClick={() => router.push(`/admin/grants/${grant.id}`)}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-      style={{
-        textDecoration: 'none',
-        color: 'var(--foreground)',
-        padding: '16px',
-        marginBottom: '0',
-        display: 'block',
-        position: 'relative',
-        cursor: 'pointer',
-      }}
-    >
-      <div style={{ display: 'flex', alignItems: 'start', justifyContent: 'space-between', gap: '12px', marginBottom: '12px', position: 'relative' }}>
-        <div style={{ flex: 1 }}>
-          <h3 style={{
-            fontSize: '13px',
-            marginBottom: '6px',
-            color: 'var(--primary)',
-            fontWeight: 'bold',
-            textDecoration: tooltipVisible ? 'underline' : 'none',
-            textDecorationColor: tooltipVisible ? 'var(--secondary)' : 'transparent',
-            textDecorationThickness: tooltipVisible ? '2px' : '0',
-            textUnderlineOffset: tooltipVisible ? '2px' : '0',
-            transition: 'text-decoration 0.2s cubic-bezier(0.4, 0, 0.2, 1), text-decoration-color 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-            display: 'inline-block',
-          }}>
-            {grant.title}
-          </h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            <p style={{ color: 'var(--foreground)', fontWeight: 'bold', margin: 0, fontSize: '11px' }}>
-              {grant.organization}
-            </p>
-            <div className="flex items-center gap-2" style={{ gap: '12px', fontSize: '10px', flexWrap: 'wrap' }}>
-              <span className="flex items-center gap-1" style={{ fontWeight: 'bold', color: 'var(--foreground)' }}>
-                <span className="material-icons" style={{ fontSize: '12px', verticalAlign: 'middle' }}>location_on</span> {grant.location}
-              </span>
-              {grant.applicationUrl && (
-                <span
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    window.open(grant.applicationUrl!, '_blank', 'noopener,noreferrer');
-                  }}
-                  className="flex items-center gap-1"
-                  style={{
-                    fontWeight: 'bold',
-                    color: 'var(--primary)',
-                    textDecoration: 'none',
-                    opacity: 0.8,
-                    cursor: 'pointer',
-                    whiteSpace: 'nowrap',
-                    transition: 'opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.opacity = '1';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.opacity = '0.8';
-                  }}
-                >
-                  <span className="material-icons" style={{ fontSize: '12px', verticalAlign: 'middle' }}>link</span> Apply
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
-        <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px', textAlign: 'right' }}>
-          {displayAmount && (
-            <span style={{
-              display: 'inline-block',
-              padding: '2px 6px',
-              fontSize: '11px',
-              fontWeight: 'bold',
-              color: 'var(--foreground)',
-              border: '1px solid var(--secondary)',
-              borderRadius: '4px',
-              background: 'transparent',
-              textAlign: 'right',
-            }}>
-              {displayAmount}
-            </span>
-          )}
-          {deadline && (
-            <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px', fontWeight: 'bold', color: isExpired ? '#d32f2f' : 'var(--foreground)', fontSize: '10px', textAlign: 'right' }}>
-              <span className="material-icons" style={{ fontSize: '12px', verticalAlign: 'middle' }}>calendar_today</span> {isExpired ? 'Expired' : `Due in ${formatDistanceToNow(deadline)}`}
-            </span>
-          )}
-        </div>
-      </div>
-
-      {grant.tags && grant.tags.length > 0 && (
-        <div className="flex flex-wrap gap-1" style={{ gap: '6px', marginBottom: '12px' }}>
-          {grant.tags.map((tagRelation) => (
-            <span
-              key={tagRelation.tag.slug}
-              style={{
-                padding: '1px 4px',
-                fontSize: '10px',
-                background: 'var(--color-camel-800)',
-                color: 'var(--color-charcoal-brown-500)',
-                border: '1px solid var(--secondary)',
-                borderRadius: '4px',
-                fontWeight: 'bold',
-              }}
-            >
-              {formatTagName(tagRelation.tag.name)}
-            </span>
-          ))}
-        </div>
-      )}
-
-      {grant.description && (
-        <div
-          className="compact-mb grant-description"
-          style={{
-            fontSize: '11px',
-            color: 'var(--foreground)',
-            marginBottom: tooltipVisible ? '0' : '12px',
-            lineHeight: '1.3',
-            display: '-webkit-box',
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: 'vertical',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            opacity: tooltipVisible ? 0 : 1,
-            maxHeight: tooltipVisible ? '0' : 'none',
-            transition: 'opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), margin-bottom 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-          }}
-        >
-          <p style={{ margin: 0 }}>
-            {grant.description}
-          </p>
-        </div>
-      )}
-
-      <GrantTooltip
-        description={grant.description}
-        eligibility={grant.eligibility || null}
-        isVisible={tooltipVisible}
-      />
-    </div>
-  );
-}
-
 export default function AdminDashboard() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -387,10 +141,21 @@ export default function AdminDashboard() {
   const [jobs, setJobs] = useState<ScrapeJob[]>([]);
   const [sources, setSources] = useState<GrantSource[]>([]);
   const [scraping, setScraping] = useState(false);
-  const [newSourceName, setNewSourceName] = useState('');
-  const [newSourceUrl, setNewSourceUrl] = useState('');
-  const [addingSource, setAddingSource] = useState(false);
   const [previewingGrantId, setPreviewingGrantId] = useState<string | null>(null);
+  const [toasts, setToasts] = useState<AdminToastMessage[]>([]);
+  const toastIdRef = useRef(0);
+
+  const showToast = useCallback((message: string, type: AdminToastMessage['type']) => {
+    const id = ++toastIdRef.current;
+    setToasts((prev) => [...prev, { id, message, type }]);
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, 5000);
+  }, []);
+
+  const dismissToast = useCallback((id: number) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  }, []);
 
   // Declare fetch functions as function declarations (hoisted) before they're used
   async function fetchPendingGrants() {
@@ -454,20 +219,6 @@ export default function AdminDashboard() {
     setSortConfig({ key, direction });
   };
 
-  // Sources Table Sorting
-  const [sourceSortConfig, setSourceSortConfig] = useState<{ key: 'name' | 'status' | 'lastScraped' | null; direction: 'asc' | 'desc' }>({
-    key: null,
-    direction: 'asc',
-  });
-
-  const handleSourceSort = (key: 'name' | 'status' | 'lastScraped') => {
-    let direction: 'asc' | 'desc' = 'asc';
-    if (sourceSortConfig.key === key && sourceSortConfig.direction === 'asc') {
-      direction = 'desc';
-    }
-    setSourceSortConfig({ key, direction });
-  };
-
   const sortedGrants = [...pendingGrants].sort((a, b) => {
     if (!sortConfig.key) return 0;
 
@@ -480,36 +231,6 @@ export default function AdminDashboard() {
 
     const compareResult = aValue < bValue ? -1 : 1;
     return sortConfig.direction === 'asc' ? compareResult : -compareResult;
-  });
-
-  // Sort sources
-  const sortedSources = [...sources].sort((a, b) => {
-    if (!sourceSortConfig.key) return 0;
-
-    if (sourceSortConfig.key === 'name') {
-      const compareResult = a.name.localeCompare(b.name);
-      return sourceSortConfig.direction === 'asc' ? compareResult : -compareResult;
-    }
-
-    if (sourceSortConfig.key === 'status') {
-      const aJobs = jobs.filter(job => job.grantSource?.name === a.name);
-      const bJobs = jobs.filter(job => job.grantSource?.name === b.name);
-      const aLatestJob = aJobs.length > 0 ? aJobs[0] : null;
-      const bLatestJob = bJobs.length > 0 ? bJobs[0] : null;
-      const aStatus = aLatestJob ? (aLatestJob.status === 'FAILED' || (aLatestJob.status === 'COMPLETED' && aLatestJob.discoveredCount === 0 && aLatestJob.errorMessage) ? 'FAILED' : aLatestJob.status) : 'PENDING';
-      const bStatus = bLatestJob ? (bLatestJob.status === 'FAILED' || (bLatestJob.status === 'COMPLETED' && bLatestJob.discoveredCount === 0 && bLatestJob.errorMessage) ? 'FAILED' : bLatestJob.status) : 'PENDING';
-      const compareResult = aStatus.localeCompare(bStatus);
-      return sourceSortConfig.direction === 'asc' ? compareResult : -compareResult;
-    }
-
-    if (sourceSortConfig.key === 'lastScraped') {
-      const aDate = a.lastScraped ? new Date(a.lastScraped).getTime() : 0;
-      const bDate = b.lastScraped ? new Date(b.lastScraped).getTime() : 0;
-      const compareResult = aDate - bDate;
-      return sourceSortConfig.direction === 'asc' ? compareResult : -compareResult;
-    }
-
-    return 0;
   });
 
   // Scraper Handlers
@@ -526,67 +247,44 @@ export default function AdminDashboard() {
       const result = await response.json();
       
       if (result.success) {
-        alert(`Grant discovered: ${result.grant?.title || 'Unknown'}`);
+        showToast(`Grant discovered: ${result.grant?.title || 'Unknown'}`, 'success');
         fetchJobs();
         fetchSources();
         fetchPendingGrants();
       } else {
-        alert(result.message || 'No grant information found');
+        showToast(result.message || 'No grant information found', 'error');
         fetchJobs();
         fetchSources();
       }
     } catch (error) {
       console.error('Error scraping source:', error);
-      alert('Error scraping source');
+      showToast('Error scraping source', 'error');
     } finally {
       setScraping(false);
     }
   };
 
-  const handleAddSource = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newSourceName || !newSourceUrl) return;
-
-    setAddingSource(true);
-    try {
-      const response = await fetch('/api/scrape/sources', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newSourceName, url: newSourceUrl })
-      });
-      
-      const result = await response.json();
-      if (result.source) {
-        setNewSourceName('');
-        setNewSourceUrl('');
-        fetchSources();
-      } else {
-        alert(result.error || 'Failed to add source');
-      }
-    } catch (error) {
-      console.error('Error adding source:', error);
-      alert('Error adding source');
-    } finally {
-      setAddingSource(false);
+  const handleAddSource = async (name: string, url: string) => {
+    const response = await fetch('/api/scrape/sources', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, url })
+    });
+    const result = await response.json();
+    if (result.source) {
+      fetchSources();
+      return { success: true };
     }
+    return { success: false, error: result.error || 'Failed to add source' };
   };
 
   const handleDeleteSource = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this source?')) return;
-    
-    try {
-      const response = await fetch(`/api/scrape/sources/${id}`, {
-        method: 'DELETE'
-      });
-      
-      if (response.ok) {
-        fetchSources();
-      } else {
-        alert('Failed to delete source');
-      }
-    } catch (error) {
-      console.error('Error deleting source:', error);
-      alert('Error deleting source');
+    const response = await fetch(`/api/scrape/sources/${id}`, { method: 'DELETE' });
+    if (response.ok) {
+      fetchSources();
+      showToast('Source deleted', 'success');
+    } else {
+      showToast('Failed to delete source', 'error');
     }
   };
 
@@ -600,17 +298,8 @@ export default function AdminDashboard() {
       fetchSources();
     } catch (error) {
       console.error('Error toggling source:', error);
+      showToast('Failed to toggle source', 'error');
     }
-  };
-
-  const getStatusBadge = (status: string) => {
-    const styles: Record<string, { bg: string; color: string; border: string }> = {
-      PENDING: { bg: 'var(--inset-bg)', color: 'var(--foreground)', border: 'var(--border-color)' },
-      RUNNING: { bg: 'var(--inset-bg)', color: 'var(--foreground)', border: 'var(--primary)' },
-      COMPLETED: { bg: 'var(--inset-bg)', color: 'var(--foreground)', border: 'var(--color-saddle-brown-600)' },
-      FAILED: { bg: 'var(--inset-bg)', color: 'var(--foreground)', border: 'var(--color-saddle-brown-700)' }
-    };
-    return styles[status] || { bg: 'var(--inset-bg)', color: 'var(--foreground)', border: 'var(--muted)' };
   };
 
   const SortableHeader = ({ label, sortKey }: { label: string; sortKey: keyof Grant }) => (
@@ -638,32 +327,6 @@ export default function AdminDashboard() {
     </th>
   );
 
-  const SortableSourceHeader = ({ label, sortKey, minWidth }: { label: string; sortKey: 'name' | 'status' | 'lastScraped'; minWidth?: string }) => (
-    <th
-      className={sortKey === 'lastScraped' ? 'last-scraped-column' : ''}
-      style={{
-        padding: '8px',
-        textAlign: sortKey === 'status' ? 'center' : 'left',
-        fontWeight: 'bold',
-        color: 'var(--foreground)',
-        whiteSpace: 'nowrap',
-        cursor: 'pointer',
-        userSelect: 'none',
-        minWidth: minWidth || 'auto',
-      }}
-      onClick={() => handleSourceSort(sortKey)}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', justifyContent: sortKey === 'status' ? 'center' : 'flex-start' }}>
-        {label}
-        {sourceSortConfig.key === sortKey && (
-          <span style={{ fontSize: '10px' }}>
-            {sourceSortConfig.direction === 'asc' ? '▲' : '▼'}
-          </span>
-        )}
-      </div>
-    </th>
-  );
-
   if (status === 'loading' || loading) {
     return (
       <div className="min-h-screen" style={{ background: 'var(--background)' }}>
@@ -683,7 +346,8 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen" style={{ background: 'var(--background)' }}>
-      
+      <AdminToast toasts={toasts} onDismiss={dismissToast} />
+
       <main className="mx-auto" style={{ maxWidth: '1440px', padding: '0 16px', marginTop: '8px' }}>
         <div className="compact-mb" style={{ marginBottom: '8px', margin: '0 8px 16px 8px' }}>
           <h1 className="aol-heading-large compact-mb" style={{ fontSize: '23px', marginBottom: '2px' }}>Dashboard</h1>
@@ -692,77 +356,10 @@ export default function AdminDashboard() {
           </p>
         </div>
 
-        {/* Add Source Form */}
-        <div style={{ margin: '0 8px 16px 8px' }}>
-          <style>{`
-            @media (max-width: 640px) {
-              .source-inputs-container {
-                flex-direction: column !important;
-              }
-              .source-inputs-container input {
-                width: 100% !important;
-                flex: 1 1 100% !important;
-              }
-            }
-          `}</style>
-          <form onSubmit={handleAddSource} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <div className="source-inputs-container" style={{ 
-              display: 'flex', 
-              flexDirection: 'row',
-              gap: '8px',
-              flexWrap: 'wrap',
-              width: '100%',
-              boxSizing: 'border-box'
-            }}>
-              <input
-                type="text"
-                value={newSourceName}
-                onChange={(e) => setNewSourceName(e.target.value)}
-                placeholder="Source Name"
-                required
-                className="aol-input"
-                style={{ 
-                  flex: '1 1 150px',
-                  minWidth: '0',
-                  width: '100%',
-                  boxSizing: 'border-box'
-                }}
-              />
-              <input
-                type="url"
-                value={newSourceUrl}
-                onChange={(e) => setNewSourceUrl(e.target.value)}
-                placeholder="URL"
-                required
-                className="aol-input"
-                style={{ 
-                  flex: '2 1 200px',
-                  minWidth: '0',
-                  width: '100%',
-                  boxSizing: 'border-box'
-                }}
-              />
-              <button
-                type="submit"
-                disabled={addingSource}
-                style={{ 
-                  flexShrink: 0,
-                  background: 'var(--primary)',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  padding: '6px 12px',
-                  fontSize: '12px',
-                  fontWeight: 'bold',
-                  cursor: addingSource ? 'not-allowed' : 'pointer',
-                  opacity: addingSource ? 0.6 : 1
-                }}
-              >
-                {addingSource ? 'Adding...' : 'Add Source'}
-              </button>
-            </div>
-          </form>
-        </div>
+        <AdminAddSourceForm
+          onAdd={handleAddSource}
+          onMessage={showToast}
+        />
 
         {/* Grant Preview Section */}
         {previewingGrantId && (() => {
@@ -779,204 +376,24 @@ export default function AdminDashboard() {
               </h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {latestJob.grants.map((grant) => (
-                  <GrantPreviewCard key={grant.id} grant={grant} router={router} />
+                  <AdminGrantPreviewCard key={grant.id} grant={grant} />
                 ))}
               </div>
             </div>
           );
         })()}
 
-        {/* Combined Sources and Jobs Table */}
-        <div style={{ margin: '0 8px 32px 8px' }}>
-          <div className="aol-box" style={{ overflow: 'auto', padding: '16px' }}>
-            <h2 className="aol-heading compact-mb" style={{ fontSize: '16px', marginBottom: '12px' }}>
-              Grant Sources & Scrape Jobs
-            </h2>
-            <style>{`
-              @media (max-width: 768px) {
-                .sources-table {
-                  font-size: 10px !important;
-                }
-                .sources-table th,
-                .sources-table td {
-                  padding: 6px 4px !important;
-                }
-                .sources-table .source-name {
-                  max-width: 120px !important;
-                }
-                .sources-table .actions-column {
-                  min-width: 140px !important;
-                }
-                .sources-table .last-scraped-column {
-                  min-width: 100px !important;
-                }
-                .sources-table .actions-column button {
-                  padding: 3px 6px !important;
-                  font-size: 9px !important;
-                }
-                .sources-table .actions-column .material-icons {
-                  font-size: 12px !important;
-                }
-              }
-            `}</style>
-            <table className="sources-table" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0', fontSize: '11px' }}>
-              <thead>
-                <tr style={{ background: 'var(--inset-bg)' }}>
-                  <SortableSourceHeader label="Status" sortKey="status" />
-                  <SortableSourceHeader label="Source" sortKey="name" />
-                  <SortableSourceHeader label="Last Scraped" sortKey="lastScraped" minWidth="120px" />
-                  <th className="actions-column" style={{ padding: '8px', textAlign: 'right', fontWeight: 'bold', color: 'var(--foreground)', whiteSpace: 'nowrap', minWidth: '160px' }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sortedSources.map((source) => {
-                  // Find jobs for this source
-                  const sourceJobs = jobs.filter(job => job.grantSource?.name === source.name);
-                  const latestJob = sourceJobs.length > 0 ? sourceJobs[0] : null;
-                  const isFailed = latestJob && (latestJob.status === 'FAILED' || (latestJob.status === 'COMPLETED' && latestJob.discoveredCount === 0 && latestJob.errorMessage));
-                  const displayStatus = latestJob ? (isFailed ? 'FAILED' : latestJob.status) : 'PENDING';
-                  const statusStyle = getStatusBadge(displayStatus);
-                  const totalGrants = sourceJobs.reduce((sum, job) => sum + job.discoveredCount, 0);
-                  const hasGrants = latestJob && latestJob.grants && latestJob.grants.length > 0;
-                  
-                  // Get status icon
-                  const getStatusIcon = (status: string) => {
-                    switch (status) {
-                      case 'PENDING':
-                        return 'schedule';
-                      case 'RUNNING':
-                        return 'sync';
-                      case 'COMPLETED':
-                        return 'check_circle';
-                      case 'FAILED':
-                        return 'error';
-                      default:
-                        return 'help_outline';
-                    }
-                  };
-                  
-                  return (
-                    <tr key={source.id} style={{ opacity: source.isActive ? 1 : 0.6 }}>
-                      <td style={{ padding: '8px', textAlign: 'center', whiteSpace: 'nowrap' }}>
-                        <span 
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            padding: '4px',
-                            fontSize: '18px',
-                            color: statusStyle.color,
-                            cursor: 'default'
-                          }}
-                          title={displayStatus}
-                        >
-                          <span className="material-icons" style={{ fontSize: '18px' }}>
-                            {getStatusIcon(displayStatus)}
-                          </span>
-                        </span>
-                      </td>
-                      <td style={{ padding: '8px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '200px' }}>
-                        <div style={{ fontWeight: 'bold', fontSize: '13px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{source.name}</div>
-                      </td>
-                      <td className="last-scraped-column" style={{ padding: '8px', fontSize: '11px', color: 'var(--foreground)', whiteSpace: 'nowrap', minWidth: '120px' }}>
-                        {source.lastScraped ? format(new Date(source.lastScraped), 'MMM d, h:mm a') : 'Never'}
-                      </td>
-                      <td className="actions-column" style={{ padding: '8px', textAlign: 'right', whiteSpace: 'nowrap', minWidth: '160px', overflow: 'visible' }}>
-                        <div style={{ display: 'flex', gap: '4px', alignItems: 'center', justifyContent: 'flex-end', flexWrap: 'nowrap', minWidth: 'fit-content' }}>
-                          {hasGrants && (
-                            <button
-                              onClick={() => setPreviewingGrantId(previewingGrantId === source.id ? null : source.id)}
-                              style={{ 
-                                fontSize: '10px', 
-                                padding: '4px 8px',
-                                background: 'var(--secondary)',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '4px',
-                                cursor: 'pointer',
-                                fontWeight: 'bold'
-                              }}
-                            >
-                              {previewingGrantId === source.id ? 'Hide' : 'Preview'}
-                            </button>
-                          )}
-                          <button
-                            onClick={() => handleScrapeSource(source.id)}
-                            disabled={scraping || !source.isActive}
-                            style={{ 
-                              fontSize: '11px', 
-                              padding: '4px 8px', 
-                              height: 'auto', 
-                              display: 'flex', 
-                              alignItems: 'center', 
-                              gap: '4px',
-                              background: 'var(--primary)',
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: '4px',
-                              cursor: scraping || !source.isActive ? 'not-allowed' : 'pointer',
-                              opacity: scraping || !source.isActive ? 0.6 : 1
-                            }}
-                            title="Run Scraper"
-                          >
-                            <span className="material-icons" style={{ fontSize: '14px' }}>rocket_launch</span>
-                          </button>
-                          <button
-                            onClick={() => handleToggleSource(source.id, source.isActive)}
-                            style={{ 
-                              fontSize: '11px', 
-                              padding: '4px 8px', 
-                              height: 'auto', 
-                              display: 'flex', 
-                              alignItems: 'center', 
-                              gap: '4px',
-                              background: 'var(--primary)',
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: '4px',
-                              cursor: 'pointer'
-                            }}
-                            title={source.isActive ? 'Disable' : 'Enable'}
-                          >
-                            <span className="material-icons" style={{ fontSize: '14px' }}>
-                              {source.isActive ? 'pause' : 'play_arrow'}
-                            </span>
-                          </button>
-                          <button
-                            onClick={() => handleDeleteSource(source.id)}
-                            style={{ 
-                              fontSize: '11px', 
-                              padding: '4px 8px', 
-                              height: 'auto', 
-                              display: 'flex', 
-                              alignItems: 'center', 
-                              gap: '4px', 
-                              color: 'white',
-                              background: '#d32f2f',
-                              border: 'none',
-                              borderRadius: '4px',
-                              cursor: 'pointer'
-                            }}
-                            title="Delete"
-                          >
-                            <span className="material-icons" style={{ fontSize: '14px' }}>delete</span>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-                {sortedSources.length === 0 && (
-                  <tr>
-                    <td colSpan={4} style={{ padding: '16px', textAlign: 'center', color: 'var(--muted-foreground)' }}>
-                      No sources configured.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <AdminSourcesTable
+          sources={sources}
+          jobs={jobs}
+          scraping={scraping}
+          previewingGrantId={previewingGrantId}
+          onScrape={handleScrapeSource}
+          onToggle={handleToggleSource}
+          onDelete={handleDeleteSource}
+          onPreviewToggle={setPreviewingGrantId}
+          onMessage={showToast}
+        />
 
         {/* Search Bar Placeholder */}
         <div className="aol-box" style={{ margin: '0 8px 16px 8px', padding: '16px' }}>

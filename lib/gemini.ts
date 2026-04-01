@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 import { ALLOWED_TAG_SLUGS, GRANT_TAGS } from "./constants";
 
 const apiKey = process.env.GEMINI_API_KEY || "";
@@ -8,7 +8,7 @@ if (!apiKey || apiKey === "your-gemini-api-key-here") {
   console.warn("   Please set GEMINI_API_KEY in your .env.local file");
 }
 
-const genAI = new GoogleGenerativeAI(apiKey);
+const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
 
 // Human readable mapping for the prompt based on GRANT_TAGS
 const ALLOWED_TAGS_DESCRIPTION = GRANT_TAGS.map(tag => `- ${tag.name} (slug: ${tag.slug})`).join('\n');
@@ -29,11 +29,9 @@ export interface ExtractedGrantData {
 
 export async function extractGrantInfo(htmlContent: string, sourceUrl: string): Promise<ExtractedGrantData | null> {
   try {
-    if (!apiKey || apiKey === "your-gemini-api-key-here") {
+    if (!apiKey || apiKey === "your-gemini-api-key-here" || !ai) {
       throw new Error("GEMINI_API_KEY is not configured. Please set it in .env.local");
     }
-
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
     // Basic cleanup of HTML content to reduce token count and noise
     // Remove scripts, styles, and excessive whitespace
@@ -42,7 +40,7 @@ export async function extractGrantInfo(htmlContent: string, sourceUrl: string): 
       .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gmi, "")
       .replace(/<!--[\s\S]*?-->/g, "")
       .replace(/\s+/g, " ")
-      .substring(0, 25000); // Increased limit for better context
+      .substring(0, 15000);
 
     const prompt = `
 You are a grant information extraction assistant. Analyze the following webpage content and extract grant information for artists and designers in Texas.
@@ -55,8 +53,8 @@ Extract the following information if available:
 - amountMax: Maximum amount as a number (if range)
 - deadline: Application deadline (ISO date format if possible)
 - location: Geographic location (city/region in Texas, or "Texas" if statewide)
-- eligibility: Who can apply (detailed requirements)
-- description: What the grant supports
+- eligibility: Who can apply (bullet list when multiple criteria)
+- description: What the grant supports (2-3 sentences or bullet points, max 400 words)
 - applicationUrl: Where to apply (use the source URL if no specific application URL)
 - tags: Array of relevant tags from this specific list: ${ALLOWED_TAG_SLUGS.join(', ')}
 
@@ -69,9 +67,12 @@ ${cleanHtml}
 
 Response (JSON only):`;
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
+    const response = await ai.models.generateContent({
+      model: "gemini-1.5-flash",
+      contents: prompt,
+    });
+
+    const text = (response as { text?: string }).text ?? "";
     
     // Extract JSON from markdown code blocks if present
     let jsonText = text.trim();
@@ -93,13 +94,13 @@ Response (JSON only):`;
     }
 
     return data as ExtractedGrantData;
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const err = error as { message?: string };
     console.error('Error extracting grant info:', error);
     
-    // Provide helpful error messages
-    if (error.message?.includes("API_KEY")) {
+    if (err.message?.includes("API_KEY")) {
       console.error("   Please check your GEMINI_API_KEY in .env.local");
-    } else if (error.message?.includes("quota") || error.message?.includes("limit")) {
+    } else if (err.message?.includes("quota") || err.message?.includes("limit")) {
       console.error("   API quota exceeded. Check your Google Cloud Console.");
     }
     
@@ -108,17 +109,14 @@ Response (JSON only):`;
 }
 
 export async function validateGrantData(grantData: ExtractedGrantData): Promise<boolean> {
-  // Basic validation
   if (!grantData.title || !grantData.organization || !grantData.location || !grantData.description) {
     return false;
   }
 
-  // Check if description is meaningful (not too short)
   if (grantData.description.length < 50) {
     return false;
   }
 
-  // Check if location mentions Texas
   const locationLower = grantData.location.toLowerCase();
   if (!locationLower.includes('texas') && 
       !locationLower.includes('tx') &&
@@ -131,11 +129,9 @@ export async function validateGrantData(grantData: ExtractedGrantData): Promise<
 
 export async function generateTagsFromGrant(description: string, eligibility: string): Promise<string[]> {
   try {
-    if (!apiKey || apiKey === "your-gemini-api-key-here") {
+    if (!apiKey || apiKey === "your-gemini-api-key-here" || !ai) {
       throw new Error("GEMINI_API_KEY is not configured. Please set it in .env.local");
     }
-
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
     const prompt = `
 You are a grant taxonomy assistant. Analyze the following grant description and eligibility requirements to identify relevant tags.
@@ -157,11 +153,13 @@ Return ONLY a JSON object with a "tags" key containing an array of strings.
 
 Response (JSON only):`;
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
+    const response = await ai.models.generateContent({
+      model: "gemini-1.5-flash",
+      contents: prompt,
+    });
+
+    const text = (response as { text?: string }).text ?? "";
     
-    // Extract JSON from markdown code blocks if present
     let jsonText = text.trim();
     if (jsonText.startsWith('```json')) {
       jsonText = jsonText.replace(/```json\n?/g, '').replace(/```\n?/g, '');
@@ -175,17 +173,16 @@ Response (JSON only):`;
       return [];
     }
 
-    // Filter to ensure only allowed tags are returned
     return data.tags
-      .filter((tag: any) => typeof tag === 'string')
+      .filter((tag: unknown): tag is string => typeof tag === 'string')
       .map((tag: string) => tag.toLowerCase().trim())
       .filter((tag: string) => ALLOWED_TAG_SLUGS.includes(tag));
 
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const err = error as { message?: string };
     console.error('Error generating tags:', error);
     
-    // Provide helpful error messages
-    if (error.message?.includes("API_KEY")) {
+    if (err.message?.includes("API_KEY")) {
       console.error("   Please check your GEMINI_API_KEY in .env.local");
     }
     
