@@ -109,7 +109,16 @@ export async function GET(request: NextRequest) {
             include: {
               tag: true
             }
-          }
+          },
+          scrapeJob: {
+            select: {
+              grantSource: {
+                select: {
+                  isActive: true,
+                },
+              },
+            },
+          },
         },
         orderBy: [
           { deadline: 'asc' },

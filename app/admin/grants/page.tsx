@@ -147,15 +147,20 @@ export default function AdminGrantsPage() {
                       Edit
                     </Link>
                     <button
+                      type="button"
                       onClick={() => handleDelete(grant.id)}
                       className="aol-button-secondary"
+                      title="Delete"
+                      aria-label="Delete"
                       style={{
-                        fontSize: '10px',
                         padding: '2px 6px',
-                        background: 'linear-gradient(to bottom, var(--color-saddle-brown-600), var(--color-saddle-brown-700))'
+                        background: 'linear-gradient(to bottom, var(--color-saddle-brown-600), var(--color-saddle-brown-700))',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
                       }}
                     >
-                      Delete
+                      <span className="material-icons" style={{ fontSize: '16px' }}>delete</span>
                     </button>
                   </td>
                 </tr>

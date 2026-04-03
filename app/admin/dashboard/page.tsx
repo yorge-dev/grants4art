@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useMemo, type DragEvent } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { format, isValid } from 'date-fns';
@@ -10,6 +10,17 @@ import { AdminAddSourceForm } from '@/components/admin/AdminAddSourceForm';
 import { AdminSourcesTable } from '@/components/admin/AdminSourcesTable';
 import { AdminGrantPreviewCard } from '@/components/admin/AdminGrantPreviewCard';
 import { AdminToast, type AdminToastMessage } from '@/components/admin/AdminToast';
+import {
+  DraggableTableTh,
+  getAdminTableColumnDragData,
+  setAdminTableColumnDragData,
+} from '@/components/admin/DraggableTableTh';
+import {
+  ADMIN_GRANT_TABLE_COLUMN_ORDER_KEY,
+  DEFAULT_GRANT_COLUMN_ORDER,
+  normalizeGrantColumnOrder,
+  reorderColumnIds,
+} from '@/lib/adminTableColumnOrder';
 
 interface Grant {
   id: string;
@@ -29,6 +40,11 @@ interface Grant {
   createdAt: Date | string;
   updatedAt: Date | string;
   category?: string;
+  scrapeJob?: {
+    grantSource: {
+      isActive: boolean;
+    } | null;
+  } | null;
   tags?: Array<{
     tag: {
       name: string;
@@ -135,6 +151,64 @@ export default function AdminDashboard() {
     if (typeof window !== 'undefined') {
       localStorage.setItem('grantTableColumnVisibility', JSON.stringify(newVisibility));
     }
+  };
+
+  const [grantColumnOrder, setGrantColumnOrder] = useState<string[]>(() => {
+    if (typeof window !== 'undefined') {
+      const raw = localStorage.getItem(ADMIN_GRANT_TABLE_COLUMN_ORDER_KEY);
+      if (raw) {
+        try {
+          return normalizeGrantColumnOrder(JSON.parse(raw));
+        } catch {
+          return [...DEFAULT_GRANT_COLUMN_ORDER];
+        }
+      }
+    }
+    return [...DEFAULT_GRANT_COLUMN_ORDER];
+  });
+
+  const [draggingGrantColumn, setDraggingGrantColumn] = useState<string | null>(null);
+
+  const visibleGrantColumnOrder = useMemo(
+    () => grantColumnOrder.filter((id) => id === 'actions' || columnVisibility[id]),
+    [grantColumnOrder, columnVisibility]
+  );
+
+  const handleGrantColDragStart = (e: DragEvent, id: string) => {
+    setAdminTableColumnDragData(e, id);
+    setDraggingGrantColumn(id);
+  };
+
+  const handleGrantColDragEnd = () => setDraggingGrantColumn(null);
+
+  const handleGrantColDragOver = (e: DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleGrantColDrop = (e: DragEvent, targetId: string) => {
+    e.preventDefault();
+    const sourceId = getAdminTableColumnDragData(e);
+    if (!sourceId || sourceId === targetId) {
+      setDraggingGrantColumn(null);
+      return;
+    }
+    setGrantColumnOrder((prev) => {
+      const next = reorderColumnIds(prev, sourceId, targetId);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(ADMIN_GRANT_TABLE_COLUMN_ORDER_KEY, JSON.stringify(next));
+      }
+      return next;
+    });
+    setDraggingGrantColumn(null);
+  };
+
+  const grantColDragProps = {
+    draggingColumnId: draggingGrantColumn,
+    onColumnDragStart: handleGrantColDragStart,
+    onColumnDragEnd: handleGrantColDragEnd,
+    onColumnDragOver: handleGrantColDragOver,
+    onColumnDrop: handleGrantColDrop,
   };
 
   // Scraper State
@@ -284,16 +358,6 @@ export default function AdminDashboard() {
     return { success: false, error: result.error || 'Failed to add source' };
   };
 
-  const handleDeleteSource = async (id: string) => {
-    const response = await fetch(`/api/scrape/sources/${id}`, { method: 'DELETE' });
-    if (response.ok) {
-      fetchSources();
-      showToast('Source deleted', 'success');
-    } else {
-      showToast('Failed to delete source', 'error');
-    }
-  };
-
   const handleToggleSource = async (id: string, currentStatus: boolean) => {
     try {
       await fetch(`/api/scrape/sources/${id}`, {
@@ -302,6 +366,7 @@ export default function AdminDashboard() {
         body: JSON.stringify({ isActive: !currentStatus })
       });
       fetchSources();
+      fetchPendingGrants();
     } catch (error) {
       console.error('Error toggling source:', error);
       showToast('Failed to toggle source', 'error');
@@ -344,29 +409,32 @@ export default function AdminDashboard() {
     }
   };
 
-  const SortableHeader = ({ label, sortKey }: { label: string; sortKey: keyof Grant }) => (
-    <th
-      className="compact-px compact-py"
+  const SortableHeaderInner = ({ label, sortKey }: { label: string; sortKey: keyof Grant }) => (
+    <div
       style={{
-        padding: '4px 6px',
-        textAlign: 'left',
-        fontWeight: 'bold',
-        color: 'var(--foreground)',
-        whiteSpace: 'nowrap',
         cursor: 'pointer',
         userSelect: 'none',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '4px',
+        fontWeight: 'bold',
+        color: 'var(--foreground)',
       }}
       onClick={() => handleSort(sortKey)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          handleSort(sortKey);
+        }
+      }}
+      role="button"
+      tabIndex={0}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-        {label}
-        {sortConfig.key === sortKey && (
-          <span style={{ fontSize: '10px' }}>
-            {sortConfig.direction === 'asc' ? '▲' : '▼'}
-          </span>
-        )}
-      </div>
-    </th>
+      {label}
+      {sortConfig.key === sortKey && (
+        <span style={{ fontSize: '10px' }}>{sortConfig.direction === 'asc' ? '▲' : '▼'}</span>
+      )}
+    </div>
   );
 
   if (status === 'loading' || loading) {
@@ -432,7 +500,6 @@ export default function AdminDashboard() {
           previewingGrantId={previewingGrantId}
           onScrape={handleScrapeSource}
           onToggle={handleToggleSource}
-          onDelete={handleDeleteSource}
           onPreviewToggle={setPreviewingGrantId}
           onMessage={showToast}
         />
@@ -600,168 +667,273 @@ export default function AdminDashboard() {
             <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0', fontSize: '11px', borderRadius: '8px', overflow: 'hidden' }}>
               <thead>
                 <tr style={{ background: 'var(--inset-bg)' }}>
-                  <th className="compact-px compact-py" style={{ padding: '4px 6px', textAlign: 'right', fontWeight: 'bold', color: 'var(--foreground)', whiteSpace: 'nowrap' }}>
-                    Actions
-                  </th>
-                  {columnVisibility.title && <SortableHeader label="Title" sortKey="title" />}
-                  {columnVisibility.organization && <SortableHeader label="Organization" sortKey="organization" />}
-                  {columnVisibility.location && <SortableHeader label="Location" sortKey="location" />}
-                  {columnVisibility.amountMin && <SortableHeader label="Amount Min" sortKey="amountMin" />}
-                  {columnVisibility.amountMax && <SortableHeader label="Amount Max" sortKey="amountMax" />}
-                  {columnVisibility.deadline && <SortableHeader label="Deadline" sortKey="deadline" />}
-                  {columnVisibility.applicationUrl && (
-                    <th className="compact-px compact-py" style={{ padding: '4px 6px', textAlign: 'left', fontWeight: 'bold', color: 'var(--foreground)', whiteSpace: 'nowrap' }}>
-                      Application URL
-                    </th>
-                  )}
-                  {columnVisibility.category && <SortableHeader label="Funding Source" sortKey="category" />}
-                  {columnVisibility.tags && (
-                    <th className="compact-px compact-py" style={{ padding: '4px 6px', textAlign: 'left', fontWeight: 'bold', color: 'var(--foreground)', whiteSpace: 'nowrap' }}>
-                      Tags
-                    </th>
-                  )}
-                  {columnVisibility.createdAt && <SortableHeader label="Live Date" sortKey="createdAt" />}
+                  {visibleGrantColumnOrder.map((colId) => {
+                    const thBase = {
+                      className: 'compact-px compact-py' as const,
+                      style: {
+                        padding: '4px 6px' as const,
+                        textAlign: 'left' as const,
+                        fontWeight: 'bold' as const,
+                        color: 'var(--foreground)',
+                        whiteSpace: 'nowrap' as const,
+                      },
+                    };
+                    switch (colId) {
+                      case 'actions':
+                        return (
+                          <DraggableTableTh
+                            key={colId}
+                            columnId={colId}
+                            {...grantColDragProps}
+                            className="compact-px compact-py"
+                            style={{
+                              padding: '4px 6px',
+                              textAlign: 'right',
+                              fontWeight: 'bold',
+                              color: 'var(--foreground)',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            <span style={{ fontWeight: 'bold' }}>Actions</span>
+                          </DraggableTableTh>
+                        );
+                      case 'title':
+                        return (
+                          <DraggableTableTh key={colId} columnId={colId} {...grantColDragProps} {...thBase}>
+                            <SortableHeaderInner label="Title" sortKey="title" />
+                          </DraggableTableTh>
+                        );
+                      case 'organization':
+                        return (
+                          <DraggableTableTh key={colId} columnId={colId} {...grantColDragProps} {...thBase}>
+                            <SortableHeaderInner label="Organization" sortKey="organization" />
+                          </DraggableTableTh>
+                        );
+                      case 'location':
+                        return (
+                          <DraggableTableTh key={colId} columnId={colId} {...grantColDragProps} {...thBase}>
+                            <SortableHeaderInner label="Location" sortKey="location" />
+                          </DraggableTableTh>
+                        );
+                      case 'amountMin':
+                        return (
+                          <DraggableTableTh key={colId} columnId={colId} {...grantColDragProps} {...thBase}>
+                            <SortableHeaderInner label="Amount Min" sortKey="amountMin" />
+                          </DraggableTableTh>
+                        );
+                      case 'amountMax':
+                        return (
+                          <DraggableTableTh key={colId} columnId={colId} {...grantColDragProps} {...thBase}>
+                            <SortableHeaderInner label="Amount Max" sortKey="amountMax" />
+                          </DraggableTableTh>
+                        );
+                      case 'deadline':
+                        return (
+                          <DraggableTableTh key={colId} columnId={colId} {...grantColDragProps} {...thBase}>
+                            <SortableHeaderInner label="Deadline" sortKey="deadline" />
+                          </DraggableTableTh>
+                        );
+                      case 'applicationUrl':
+                        return (
+                          <DraggableTableTh key={colId} columnId={colId} {...grantColDragProps} {...thBase}>
+                            <span style={{ fontWeight: 'bold', color: 'var(--foreground)' }}>Application URL</span>
+                          </DraggableTableTh>
+                        );
+                      case 'category':
+                        return (
+                          <DraggableTableTh key={colId} columnId={colId} {...grantColDragProps} {...thBase}>
+                            <SortableHeaderInner label="Funding Source" sortKey="category" />
+                          </DraggableTableTh>
+                        );
+                      case 'tags':
+                        return (
+                          <DraggableTableTh key={colId} columnId={colId} {...grantColDragProps} {...thBase}>
+                            <span style={{ fontWeight: 'bold', color: 'var(--foreground)' }}>Tags</span>
+                          </DraggableTableTh>
+                        );
+                      case 'createdAt':
+                        return (
+                          <DraggableTableTh key={colId} columnId={colId} {...grantColDragProps} {...thBase}>
+                            <SortableHeaderInner label="Live Date" sortKey="createdAt" />
+                          </DraggableTableTh>
+                        );
+                      default:
+                        return null;
+                    }
+                  })}
                 </tr>
               </thead>
               <tbody>
-                {sortedGrants.map((grant) => (
-                  <tr key={grant.id}>
-                    <td className="compact-px compact-py" style={{ padding: '4px 6px', textAlign: 'right' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px', flexWrap: 'wrap' }}>
-                        <button
-                          type="button"
-                          onClick={() => router.push(`/admin/grants/${grant.id}`)}
-                          style={{
-                            textDecoration: 'none',
-                            fontSize: '10px',
-                            padding: '4px 8px',
-                            background: 'var(--secondary)',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            fontWeight: 'bold',
-                          }}
-                        >
-                          Edit
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => openDeleteGrantDialog(grant)}
-                          style={{
-                            fontSize: '10px',
-                            padding: '4px 8px',
-                            background: 'var(--background)',
-                            color: 'var(--foreground)',
-                            border: '2px solid #b91c1c',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            fontWeight: 'bold',
-                          }}
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </td>
-                    {columnVisibility.title && (
-                      <td className="compact-px compact-py" style={{ padding: '4px 6px', maxWidth: '200px' }}>
-                        <div style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--foreground)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{grant.title}</div>
-                      </td>
-                    )}
-                    {columnVisibility.organization && (
-                      <td className="compact-px compact-py" style={{ padding: '4px 6px', maxWidth: '150px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        <div style={{ fontSize: '11px', color: 'var(--foreground)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={grant.organization}>{grant.organization}</div>
-                      </td>
-                    )}
-                    {columnVisibility.location && (
-                      <td className="compact-px compact-py" style={{ padding: '4px 6px', fontSize: '11px', color: 'var(--foreground)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '120px' }}>
-                        <span title={grant.location}>{grant.location}</span>
-                      </td>
-                    )}
-                    {columnVisibility.amountMin && (
-                      <td className="compact-px compact-py" style={{ padding: '4px 6px', fontSize: '11px', color: 'var(--foreground)' }}>
-                        {grant.amountMin ? `$${grant.amountMin.toLocaleString()}` : '-'}
-                      </td>
-                    )}
-                    {columnVisibility.amountMax && (
-                      <td className="compact-px compact-py" style={{ padding: '4px 6px', fontSize: '11px', color: 'var(--foreground)' }}>
-                        {grant.amountMax ? `$${grant.amountMax.toLocaleString()}` : '-'}
-                      </td>
-                    )}
-                    {columnVisibility.deadline && (
-                      <td className="compact-px compact-py" style={{ padding: '4px 6px', fontSize: '11px', color: 'var(--foreground)' }}>
-                        {grant.deadline ? formatSafeDate(grant.deadline, 'MM/dd/yyyy') : '-'}
-                      </td>
-                    )}
-                    {columnVisibility.applicationUrl && (
-                      <td className="compact-px compact-py" style={{ padding: '4px 6px', textAlign: 'center' }}>
-                        {grant.applicationUrl ? (
-                          <a 
-                            href={grant.applicationUrl} 
-                            target="_blank" 
-                            rel="noopener noreferrer" 
-                            style={{ 
-                              color: 'var(--primary)', 
-                              textDecoration: 'none',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              cursor: 'pointer',
-                              transition: 'opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.opacity = '0.7';
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.opacity = '1';
-                            }}
-                            title={grant.applicationUrl}
-                          >
-                            <span className="material-icons" style={{ fontSize: '16px' }}>language</span>
-                          </a>
-                        ) : '-'}
-                      </td>
-                    )}
-                    {columnVisibility.category && (
-                      <td className="compact-px compact-py" style={{ padding: '4px 6px', fontSize: '10px', color: 'var(--foreground)' }}>
-                        {grant.category || '-'}
-                      </td>
-                    )}
-                    {columnVisibility.tags && (
-                      <td className="compact-px compact-py" style={{ padding: '4px 6px', fontSize: '10px', maxWidth: '150px' }}>
-                        {grant.tags && grant.tags.length > 0 ? (
-                          <div className="flex flex-wrap gap-1" style={{ gap: '2px' }}>
-                            {grant.tags.slice(0, 3).map((tagRelation, idx) => (
-                              <span
-                                key={idx}
-                                style={{
-                                  padding: '1px 4px',
-                                  fontSize: '9px',
-                                  background: 'var(--inset-bg)',
-                                  color: 'var(--foreground)',
-                                  border: 'none',
-                                  borderRadius: '3px',
-                                  fontWeight: 'bold',
-                                  display: 'inline-block'
-                                }}
-                              >
-                                {tagRelation.tag.name}
-                              </span>
-                            ))}
-                            {grant.tags.length > 3 && (
-                              <span style={{ fontSize: '9px', color: 'var(--foreground)' }}>+{grant.tags.length - 3}</span>
-                            )}
-                          </div>
-                        ) : '-'}
-                      </td>
-                    )}
-                    {columnVisibility.createdAt && (
-                      <td className="compact-px compact-py" style={{ padding: '4px 6px', fontSize: '10px', color: 'var(--foreground)', whiteSpace: 'nowrap' }}>
-                        {formatSafeDate(grant.createdAt, 'MM/dd/yyyy')}
-                      </td>
-                    )}
+                {sortedGrants.map((grant) => {
+                  const grantSourceDisabled =
+                    grant.scrapeJob?.grantSource != null && !grant.scrapeJob.grantSource.isActive;
+                  return (
+                  <tr key={grant.id} style={{ opacity: grantSourceDisabled ? 0.6 : 1 }}>
+                    {visibleGrantColumnOrder.map((colId) => {
+                      switch (colId) {
+                        case 'actions':
+                          return (
+                            <td key={colId} className="compact-px compact-py" style={{ padding: '4px 6px', textAlign: 'right' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px', flexWrap: 'nowrap' }}>
+                                <button
+                                  type="button"
+                                  onClick={() => router.push(`/admin/grants/${grant.id}`)}
+                                  style={{
+                                    textDecoration: 'none',
+                                    fontSize: '10px',
+                                    padding: '4px 8px',
+                                    background: 'var(--secondary)',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    cursor: 'pointer',
+                                    fontWeight: 'bold',
+                                  }}
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => openDeleteGrantDialog(grant)}
+                                  title="Delete"
+                                  aria-label="Delete"
+                                  style={{
+                                    padding: '4px 6px',
+                                    background: 'var(--background)',
+                                    color: 'var(--foreground)',
+                                    border: '2px solid #b91c1c',
+                                    borderRadius: '4px',
+                                    cursor: 'pointer',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                  }}
+                                >
+                                  <span className="material-icons" style={{ fontSize: '16px', color: '#b91c1c' }}>
+                                    delete
+                                  </span>
+                                </button>
+                              </div>
+                            </td>
+                          );
+                        case 'title':
+                          return (
+                            <td key={colId} className="compact-px compact-py" style={{ padding: '4px 6px', maxWidth: '200px' }}>
+                              <div style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--foreground)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{grant.title}</div>
+                            </td>
+                          );
+                        case 'organization':
+                          return (
+                            <td key={colId} className="compact-px compact-py" style={{ padding: '4px 6px', maxWidth: '150px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              <div style={{ fontSize: '11px', color: 'var(--foreground)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={grant.organization}>{grant.organization}</div>
+                            </td>
+                          );
+                        case 'location':
+                          return (
+                            <td key={colId} className="compact-px compact-py" style={{ padding: '4px 6px', fontSize: '11px', color: 'var(--foreground)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '120px' }}>
+                              <span title={grant.location}>{grant.location}</span>
+                            </td>
+                          );
+                        case 'amountMin':
+                          return (
+                            <td key={colId} className="compact-px compact-py" style={{ padding: '4px 6px', fontSize: '11px', color: 'var(--foreground)' }}>
+                              {grant.amountMin ? `$${grant.amountMin.toLocaleString()}` : '-'}
+                            </td>
+                          );
+                        case 'amountMax':
+                          return (
+                            <td key={colId} className="compact-px compact-py" style={{ padding: '4px 6px', fontSize: '11px', color: 'var(--foreground)' }}>
+                              {grant.amountMax ? `$${grant.amountMax.toLocaleString()}` : '-'}
+                            </td>
+                          );
+                        case 'deadline':
+                          return (
+                            <td key={colId} className="compact-px compact-py" style={{ padding: '4px 6px', fontSize: '11px', color: 'var(--foreground)' }}>
+                              {grant.deadline ? formatSafeDate(grant.deadline, 'MM/dd/yyyy') : '-'}
+                            </td>
+                          );
+                        case 'applicationUrl':
+                          return (
+                            <td key={colId} className="compact-px compact-py" style={{ padding: '4px 6px', textAlign: 'center' }}>
+                              {grant.applicationUrl ? (
+                                <a
+                                  href={grant.applicationUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  style={{
+                                    color: 'var(--primary)',
+                                    textDecoration: 'none',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    cursor: 'pointer',
+                                    transition: 'opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    e.currentTarget.style.opacity = '0.7';
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.currentTarget.style.opacity = '1';
+                                  }}
+                                  title={grant.applicationUrl}
+                                >
+                                  <span className="material-icons" style={{ fontSize: '16px' }}>language</span>
+                                </a>
+                              ) : (
+                                '-'
+                              )}
+                            </td>
+                          );
+                        case 'category':
+                          return (
+                            <td key={colId} className="compact-px compact-py" style={{ padding: '4px 6px', fontSize: '10px', color: 'var(--foreground)' }}>
+                              {grant.category || '-'}
+                            </td>
+                          );
+                        case 'tags':
+                          return (
+                            <td key={colId} className="compact-px compact-py" style={{ padding: '4px 6px', fontSize: '10px', maxWidth: '150px' }}>
+                              {grant.tags && grant.tags.length > 0 ? (
+                                <div className="flex flex-wrap gap-1" style={{ gap: '2px' }}>
+                                  {grant.tags.slice(0, 3).map((tagRelation, idx) => (
+                                    <span
+                                      key={idx}
+                                      style={{
+                                        padding: '1px 4px',
+                                        fontSize: '9px',
+                                        background: 'var(--inset-bg)',
+                                        color: 'var(--foreground)',
+                                        border: 'none',
+                                        borderRadius: '3px',
+                                        fontWeight: 'bold',
+                                        display: 'inline-block',
+                                      }}
+                                    >
+                                      {tagRelation.tag.name}
+                                    </span>
+                                  ))}
+                                  {grant.tags.length > 3 && (
+                                    <span style={{ fontSize: '9px', color: 'var(--foreground)' }}>+{grant.tags.length - 3}</span>
+                                  )}
+                                </div>
+                              ) : (
+                                '-'
+                              )}
+                            </td>
+                          );
+                        case 'createdAt':
+                          return (
+                            <td key={colId} className="compact-px compact-py" style={{ padding: '4px 6px', fontSize: '10px', color: 'var(--foreground)', whiteSpace: 'nowrap' }}>
+                              {formatSafeDate(grant.createdAt, 'MM/dd/yyyy')}
+                            </td>
+                          );
+                        default:
+                          return null;
+                      }
+                    })}
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
             </div>
