@@ -212,6 +212,9 @@ body {
 
 * {
   cursor: url('/cursor-light.svg') 3 3, auto;
+  /* Themed scrollbars on scrollable descendants (Firefox) */
+  scrollbar-width: thin;
+  scrollbar-color: var(--secondary) var(--inset-bg);
 }
 
 a, button, input[type="button"], input[type="submit"], .aol-button, .aol-button-secondary {
@@ -220,6 +223,35 @@ a, button, input[type="button"], input[type="submit"], .aol-button, .aol-button-
 
 input[type="text"], input[type="search"], textarea, select {
   cursor: url('/cursor-light.svg') 3 3, text;
+}
+
+/* Global themed scrollbars (WebKit / Chromium / Safari) */
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+html::-webkit-scrollbar-track,
+body::-webkit-scrollbar-track,
+*::-webkit-scrollbar-track {
+  background: var(--inset-bg);
+  border-radius: 4px;
+}
+
+html::-webkit-scrollbar-thumb,
+body::-webkit-scrollbar-thumb,
+*::-webkit-scrollbar-thumb {
+  background: var(--secondary);
+  border-radius: 4px;
+  border: 2px solid var(--inset-bg);
+}
+
+html::-webkit-scrollbar-thumb:hover,
+body::-webkit-scrollbar-thumb:hover,
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
 }
 
 /* Grey theme cursor */
@@ -577,4 +609,42 @@ body > * {
 
 .theme-dropdown {
   animation: fadeIn 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Admin grants table: horizontal scroll at top, theme-colored (bottom bar hidden) */
+.admin-grant-table-scroll-top {
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--secondary);
+  background: var(--inset-bg);
+  scrollbar-width: thin;
+  scrollbar-color: var(--secondary) var(--inset-bg);
+}
+
+.admin-grant-table-scroll-top::-webkit-scrollbar {
+  height: 10px;
+}
+
+.admin-grant-table-scroll-top::-webkit-scrollbar-track {
+  background: var(--inset-bg);
+  border-radius: 4px;
+}
+
+.admin-grant-table-scroll-top::-webkit-scrollbar-thumb {
+  background: var(--secondary);
+  border-radius: 4px;
+  border: 2px solid var(--inset-bg);
+}
+
+.admin-grant-table-scroll-top::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
+}
+
+.admin-grant-table-scroll-bottom {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.admin-grant-table-scroll-bottom::-webkit-scrollbar {
+  display: none;
+  height: 0;
 }

@@ -13,6 +13,8 @@ interface DatePickerProps {
   className?: string;
   style?: React.CSSProperties;
   disabled?: boolean;
+  /** When true, skips default `aol-input` so the field can match surrounding typography (e.g. inline edit). */
+  unstyled?: boolean;
 }
 
 export function DatePicker({ 
@@ -25,7 +27,8 @@ export function DatePicker({
   max,
   className = '',
   style = {},
-  disabled = false
+  disabled = false,
+  unstyled = false,
 }: DatePickerProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -48,13 +51,13 @@ export function DatePicker({
         min={min}
         max={max}
         disabled={disabled}
-        className={`aol-input ${className}`}
-        style={{ 
+        className={unstyled ? className.trim() : `aol-input ${className}`.trim()}
+        style={{
           width: '100%',
-          paddingRight: '32px',
+          paddingRight: unstyled ? '28px' : '32px',
           opacity: disabled ? 0.5 : 1,
           cursor: disabled ? 'not-allowed' : 'text',
-          ...style
+          ...style,
         }}
       />
       <button

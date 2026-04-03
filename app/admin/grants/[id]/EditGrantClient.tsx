@@ -79,6 +79,42 @@ type EditableTextProps = {
   'aria-label'?: string;
 };
 
+/** Keeps edit controls visually aligned with display text (same size, weight, color) instead of default form chrome. */
+function buildInlineEditStyle(
+  multiline: boolean,
+  displayStyle?: React.CSSProperties,
+  inputStyle?: React.CSSProperties
+): React.CSSProperties {
+  const structural: React.CSSProperties = {
+    width: '100%',
+    maxWidth: '100%',
+    boxSizing: 'border-box',
+    margin: 0,
+    fontFamily: 'inherit',
+    background: 'transparent',
+    border: 'none',
+    outline: 'none',
+    padding: multiline ? '2px 2px' : '0 2px',
+    boxShadow: 'inset 0 -1px 0 0 var(--secondary)',
+    borderRadius: 2,
+    WebkitAppearance: 'none' as React.CSSProperties['WebkitAppearance'],
+    appearance: 'none',
+  };
+  const merged: React.CSSProperties = { ...structural, ...displayStyle, ...inputStyle };
+  merged.width = '100%';
+  merged.maxWidth = '100%';
+  merged.boxSizing = 'border-box';
+  merged.background = 'transparent';
+  merged.border = 'none';
+  merged.outline = 'none';
+  if (!merged.fontFamily) merged.fontFamily = 'inherit';
+  if (multiline) {
+    merged.resize = 'vertical';
+    if (merged.minHeight === undefined) merged.minHeight = '4.5em';
+  }
+  return merged;
+}
+
 function EditableText({
   value,
   onCommit,
@@ -108,17 +144,7 @@ function EditableText({
   }, [draft, onCommit]);
 
   if (editing) {
-    const common = {
-      width: '100%',
-      boxSizing: 'border-box' as const,
-      font: 'inherit',
-      color: 'var(--foreground)',
-      background: 'var(--text-field-bg)',
-      border: '1px solid var(--secondary)',
-      borderRadius: '6px',
-      padding: '8px 10px',
-      ...inputStyle,
-    };
+    const fieldStyle = buildInlineEditStyle(multiline ?? false, displayStyle, inputStyle);
     if (multiline) {
       return (
         <textarea
@@ -135,7 +161,7 @@ function EditableText({
           autoFocus
           placeholder={placeholder}
           aria-label={ariaLabel}
-          style={{ ...common, resize: 'vertical', minHeight: '72px', lineHeight: 1.4 }}
+          style={fieldStyle}
         />
       );
     }
@@ -157,7 +183,7 @@ function EditableText({
         autoFocus
         placeholder={placeholder}
         aria-label={ariaLabel}
-        style={common}
+        style={fieldStyle}
       />
     );
   }
@@ -208,6 +234,22 @@ export function EditGrantClient({ grantId, initialGrant }: EditGrantClientProps)
   const deadlineDate = formData.deadline ? new Date(`${formData.deadline}T12:00:00`) : null;
   const isExpired = deadlineDate && deadlineDate < new Date();
   const displayAmount = formatAmountFromForm(formData);
+
+  const editAmountInputStyle: React.CSSProperties = {
+    width: '100%',
+    boxSizing: 'border-box',
+    fontSize: '12px',
+    fontWeight: 'bold',
+    fontFamily: 'inherit',
+    color: 'var(--foreground)',
+    background: 'transparent',
+    border: 'none',
+    outline: 'none',
+    padding: '2px 4px',
+    textAlign: 'right',
+    boxShadow: 'inset 0 -1px 0 0 var(--secondary)',
+    borderRadius: 2,
+  };
 
   const setField = useCallback(<K extends keyof FormState>(key: K, v: FormState[K]) => {
     setFormData((prev) => ({ ...prev, [key]: v }));
@@ -371,7 +413,14 @@ export function EditGrantClient({ grantId, initialGrant }: EditGrantClientProps)
                     onCommit={(v) => setField('title', v)}
                     placeholder="Grant title"
                     aria-label="Grant title"
-                    displayStyle={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
+                    displayStyle={{
+                      display: 'block',
+                      fontSize: '15px',
+                      lineHeight: 1.3,
+                      color: 'var(--primary)',
+                      whiteSpace: 'pre-wrap',
+                      wordBreak: 'break-word',
+                    }}
                   />
                 </h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -381,6 +430,11 @@ export function EditGrantClient({ grantId, initialGrant }: EditGrantClientProps)
                       onCommit={(v) => setField('organization', v)}
                       placeholder="Organization"
                       aria-label="Organization"
+                      displayStyle={{
+                        fontSize: '12px',
+                        fontWeight: 'bold',
+                        color: 'var(--foreground)',
+                      }}
                     />
                   </p>
                   <div className="flex items-center gap-2" style={{ gap: '12px', fontSize: '10px', flexWrap: 'wrap' }}>
@@ -394,6 +448,11 @@ export function EditGrantClient({ grantId, initialGrant }: EditGrantClientProps)
                           onCommit={(v) => setField('location', v)}
                           placeholder="Location"
                           aria-label="Location"
+                          displayStyle={{
+                            fontSize: '10px',
+                            fontWeight: 'bold',
+                            color: 'var(--foreground)',
+                          }}
                         />
                       </span>
                     </span>
@@ -432,7 +491,12 @@ export function EditGrantClient({ grantId, initialGrant }: EditGrantClientProps)
                         onCommit={(v) => setField('applicationUrl', v)}
                         placeholder="Application URL (click to edit)"
                         aria-label="Application URL"
-                        displayStyle={{ wordBreak: 'break-all' }}
+                        displayStyle={{
+                          fontSize: '10px',
+                          fontWeight: 'bold',
+                          color: 'var(--primary)',
+                          wordBreak: 'break-all',
+                        }}
                       />
                     </span>
                   </div>
@@ -460,8 +524,7 @@ export function EditGrantClient({ grantId, initialGrant }: EditGrantClientProps)
                       value={formData.amount}
                       onChange={handleChange}
                       placeholder="Display text"
-                      className="aol-input"
-                      style={{ width: '100%', fontSize: '11px', padding: '4px 8px' }}
+                      style={editAmountInputStyle}
                     />
                     <input
                       type="number"
@@ -469,8 +532,7 @@ export function EditGrantClient({ grantId, initialGrant }: EditGrantClientProps)
                       value={formData.amountMin}
                       onChange={handleChange}
                       placeholder="Min $"
-                      className="aol-input"
-                      style={{ width: '100%', fontSize: '11px', padding: '4px 8px' }}
+                      style={editAmountInputStyle}
                     />
                     <input
                       type="number"
@@ -478,8 +540,7 @@ export function EditGrantClient({ grantId, initialGrant }: EditGrantClientProps)
                       value={formData.amountMax}
                       onChange={handleChange}
                       placeholder="Max $"
-                      className="aol-input"
-                      style={{ width: '100%', fontSize: '11px', padding: '4px 8px' }}
+                      style={editAmountInputStyle}
                     />
                     <button
                       type="button"
@@ -520,8 +581,31 @@ export function EditGrantClient({ grantId, initialGrant }: EditGrantClientProps)
                   </button>
                 )}
                 {editingDeadline ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
-                    <DatePicker id="deadline" name="deadline" value={formData.deadline} onChange={handleChange} />
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px', minWidth: '160px' }}>
+                    <DatePicker
+                      id="deadline"
+                      name="deadline"
+                      value={formData.deadline}
+                      onChange={handleChange}
+                      unstyled
+                      style={{
+                        fontSize: '10px',
+                        fontWeight: 'bold',
+                        fontFamily: 'inherit',
+                        color: deadlineDate
+                          ? isExpired
+                            ? '#d32f2f'
+                            : 'var(--foreground)'
+                          : 'var(--foreground)',
+                        background: 'transparent',
+                        border: 'none',
+                        textAlign: 'right',
+                        padding: '2px 4px',
+                        paddingRight: '26px',
+                        boxShadow: 'inset 0 -1px 0 0 var(--secondary)',
+                        borderRadius: 2,
+                      }}
+                    />
                     <button
                       type="button"
                       onClick={() => setEditingDeadline(false)}
@@ -811,8 +895,20 @@ function TagsEditor({
           name="tags"
           value={formData.tags}
           onChange={(e) => setFormData((prev) => ({ ...prev, tags: e.target.value }))}
-          className="aol-input"
-          style={{ width: '100%', fontSize: '12px' }}
+          style={{
+            width: '100%',
+            boxSizing: 'border-box',
+            fontSize: '10px',
+            fontWeight: 'bold',
+            fontFamily: 'inherit',
+            color: 'var(--color-charcoal-brown-500)',
+            background: 'transparent',
+            border: 'none',
+            outline: 'none',
+            padding: '2px 2px',
+            boxShadow: 'inset 0 -1px 0 0 var(--secondary)',
+            borderRadius: 2,
+          }}
           autoFocus
           placeholder="Comma-separated tags"
           aria-label="Tags"

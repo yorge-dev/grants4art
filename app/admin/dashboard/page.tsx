@@ -225,6 +225,66 @@ export default function AdminDashboard() {
   const [deletePermanentAcknowledged, setDeletePermanentAcknowledged] = useState(false);
   const [deletingGrantId, setDeletingGrantId] = useState<string | null>(null);
 
+  const grantTableBottomScrollRef = useRef<HTMLDivElement | null>(null);
+  const grantTableTopScrollRef = useRef<HTMLDivElement | null>(null);
+  const grantTableTopSpacerRef = useRef<HTMLDivElement | null>(null);
+  const grantTableScrollSourceRef = useRef<'top' | 'bottom' | null>(null);
+  const grantTableBottomRoRef = useRef<ResizeObserver | null>(null);
+  const grantTableRoRef = useRef<ResizeObserver | null>(null);
+
+  const updateGrantTableScrollSpacer = useCallback(() => {
+    const bottom = grantTableBottomScrollRef.current;
+    const spacer = grantTableTopSpacerRef.current;
+    if (bottom && spacer) {
+      spacer.style.width = `${bottom.scrollWidth}px`;
+    }
+  }, []);
+
+  const setGrantTableBottomScrollEl = useCallback(
+    (node: HTMLDivElement | null) => {
+      grantTableBottomScrollRef.current = node;
+      grantTableBottomRoRef.current?.disconnect();
+      grantTableBottomRoRef.current = null;
+      if (node) {
+        const ro = new ResizeObserver(() => updateGrantTableScrollSpacer());
+        ro.observe(node);
+        grantTableBottomRoRef.current = ro;
+        queueMicrotask(() => updateGrantTableScrollSpacer());
+      }
+    },
+    [updateGrantTableScrollSpacer]
+  );
+
+  const setGrantTableEl = useCallback(
+    (node: HTMLTableElement | null) => {
+      grantTableRoRef.current?.disconnect();
+      grantTableRoRef.current = null;
+      if (node) {
+        const ro = new ResizeObserver(() => updateGrantTableScrollSpacer());
+        ro.observe(node);
+        grantTableRoRef.current = ro;
+        queueMicrotask(() => updateGrantTableScrollSpacer());
+      }
+    },
+    [updateGrantTableScrollSpacer]
+  );
+
+  const onGrantTableTopScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    if (grantTableScrollSourceRef.current === 'bottom') return;
+    grantTableScrollSourceRef.current = 'top';
+    const bottom = grantTableBottomScrollRef.current;
+    if (bottom) bottom.scrollLeft = e.currentTarget.scrollLeft;
+    grantTableScrollSourceRef.current = null;
+  }, []);
+
+  const onGrantTableBottomScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    if (grantTableScrollSourceRef.current === 'top') return;
+    grantTableScrollSourceRef.current = 'bottom';
+    const top = grantTableTopScrollRef.current;
+    if (top) top.scrollLeft = e.currentTarget.scrollLeft;
+    grantTableScrollSourceRef.current = null;
+  }, []);
+
   const showToast = useCallback((message: string, type: AdminToastMessage['type']) => {
     const id = ++toastIdRef.current;
     setToasts((prev) => [...prev, { id, message, type }]);
@@ -703,10 +763,46 @@ export default function AdminDashboard() {
                 )}
               </div>
             </div>
-            
-            <div className="aol-box" style={{ overflow: 'auto' }}>
 
-            <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0', fontSize: '11px', borderRadius: '8px', overflow: 'hidden' }}>
+            <div
+              className="aol-box"
+              style={{
+                padding: '16px',
+                overflow: 'hidden',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 0,
+              }}
+            >
+              <div
+                ref={grantTableTopScrollRef}
+                className="admin-grant-table-scroll-top"
+                onScroll={onGrantTableTopScroll}
+                role="region"
+                aria-label="Grant table column scroll"
+                title="Scroll columns"
+                style={{ overflowX: 'auto', overflowY: 'hidden' }}
+              >
+                <div ref={grantTableTopSpacerRef} style={{ height: 1 }} aria-hidden />
+              </div>
+              <div
+                id="admin-grant-table-scroll-panel"
+                ref={setGrantTableBottomScrollEl}
+                className="admin-grant-table-scroll-bottom"
+                onScroll={onGrantTableBottomScroll}
+                style={{ overflowX: 'auto' }}
+              >
+                <table
+                  ref={setGrantTableEl}
+                  style={{
+                    width: '100%',
+                    borderCollapse: 'separate',
+                    borderSpacing: '0',
+                    fontSize: '11px',
+                    borderRadius: '8px',
+                    overflow: 'hidden',
+                  }}
+                >
               <thead>
                 <tr style={{ background: 'var(--inset-bg)' }}>
                   {visibleGrantColumnOrder.map((colId) => {
@@ -977,7 +1073,8 @@ export default function AdminDashboard() {
                   );
                 })}
               </tbody>
-            </table>
+                </table>
+              </div>
             </div>
           </div>
         )}
