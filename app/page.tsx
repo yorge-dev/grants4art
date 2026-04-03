@@ -9,7 +9,6 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 import { GrantSubmissionForm } from '@/components/GrantSubmissionForm';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { HeroSearch } from '@/components/HeroSearch';
-import { VersionPatchNotes } from '@/components/VersionPatchNotes';
 import { useRealtimeGrants } from '@/lib/useRealtimeGrants';
 
 interface Grant {
@@ -46,7 +45,6 @@ export default function Home() {
     pages: 0,
     totalAmount: 0
   });
-  const [isVersionNotesExpanded, setIsVersionNotesExpanded] = useState(false);
   const [lockedGrantId, setLockedGrantId] = useState<string | null>(null);
   const grantsContainerRef = useRef<HTMLDivElement>(null);
 
@@ -182,38 +180,6 @@ export default function Home() {
                 grants4.art
               </h1>
             </Link>
-            <a
-              href="#version-patch-notes"
-              onClick={(e) => {
-                e.preventDefault();
-                setIsVersionNotesExpanded(true);
-                // Small delay to ensure state update happens before scroll
-                setTimeout(() => {
-                  const element = document.getElementById('version-patch-notes');
-                  if (element) {
-                    element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                  }
-                }, 50);
-              }}
-              style={{
-                margin: '4px 0 0 0',
-                fontSize: '12px',
-                color: 'var(--foreground)',
-                opacity: 0.7,
-                textDecoration: 'none',
-                cursor: 'pointer',
-                display: 'block',
-                transition: 'opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.opacity = '1';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.opacity = '0.7';
-              }}
-            >
-              Version 0.0.2
-            </a>
           </div>
           <div style={{ flexShrink: 0 }}>
             <ThemeToggle />
@@ -329,16 +295,6 @@ export default function Home() {
           </div>
         </div>
       </main>
-
-      {/* Version Patch Notes */}
-      <div className="mx-auto" style={{ maxWidth: '1440px', padding: '0 16px', marginTop: '32px' }}>
-        <div style={{ margin: '0 8px' }}>
-          <VersionPatchNotes 
-            expanded={isVersionNotesExpanded}
-            onExpandedChange={setIsVersionNotesExpanded}
-          />
-        </div>
-      </div>
 
       {/* Footer */}
       <div className="mx-auto" style={{ maxWidth: '1440px', padding: '0 16px', marginTop: '32px' }}>

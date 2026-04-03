@@ -144,6 +144,9 @@ export default function AdminDashboard() {
   const [previewingGrantId, setPreviewingGrantId] = useState<string | null>(null);
   const [toasts, setToasts] = useState<AdminToastMessage[]>([]);
   const toastIdRef = useRef(0);
+  const [grantPendingDelete, setGrantPendingDelete] = useState<Grant | null>(null);
+  const [deletePermanentAcknowledged, setDeletePermanentAcknowledged] = useState(false);
+  const [deletingGrantId, setDeletingGrantId] = useState<string | null>(null);
 
   const showToast = useCallback((message: string, type: AdminToastMessage['type']) => {
     const id = ++toastIdRef.current;
@@ -302,6 +305,42 @@ export default function AdminDashboard() {
     } catch (error) {
       console.error('Error toggling source:', error);
       showToast('Failed to toggle source', 'error');
+    }
+  };
+
+  const openDeleteGrantDialog = (grant: Grant) => {
+    setGrantPendingDelete(grant);
+    setDeletePermanentAcknowledged(false);
+  };
+
+  const closeDeleteGrantDialog = () => {
+    setGrantPendingDelete(null);
+    setDeletePermanentAcknowledged(false);
+    setDeletingGrantId(null);
+  };
+
+  const confirmDeleteGrant = async () => {
+    if (!grantPendingDelete || !deletePermanentAcknowledged) return;
+    const id = grantPendingDelete.id;
+    setDeletingGrantId(id);
+    try {
+      const response = await fetch(`/api/grants/${id}`, { method: 'DELETE' });
+      const data = await response.json().catch(() => ({}));
+
+      if (response.ok) {
+        setPendingGrants((prev) => prev.filter((g) => g.id !== id));
+        showToast('Grant permanently deleted', 'success');
+        closeDeleteGrantDialog();
+      } else if (response.status === 401) {
+        showToast(data.error || 'You must be signed in to delete grants', 'error');
+      } else {
+        showToast(data.error || 'Failed to delete grant', 'error');
+      }
+    } catch (error) {
+      console.error('Error deleting grant:', error);
+      showToast('Failed to delete grant', 'error');
+    } finally {
+      setDeletingGrantId(null);
     }
   };
 
@@ -588,22 +627,41 @@ export default function AdminDashboard() {
                 {sortedGrants.map((grant) => (
                   <tr key={grant.id}>
                     <td className="compact-px compact-py" style={{ padding: '4px 6px', textAlign: 'right' }}>
-                      <button
-                        onClick={() => router.push(`/admin/grants/${grant.id}`)}
-                        style={{ 
-                          textDecoration: 'none', 
-                          fontSize: '10px', 
-                          padding: '4px 8px',
-                          background: 'var(--secondary)',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '4px',
-                          cursor: 'pointer',
-                          fontWeight: 'bold'
-                        }}
-                      >
-                        Edit
-                      </button>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px', flexWrap: 'wrap' }}>
+                        <button
+                          type="button"
+                          onClick={() => router.push(`/admin/grants/${grant.id}`)}
+                          style={{
+                            textDecoration: 'none',
+                            fontSize: '10px',
+                            padding: '4px 8px',
+                            background: 'var(--secondary)',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontWeight: 'bold',
+                          }}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => openDeleteGrantDialog(grant)}
+                          style={{
+                            fontSize: '10px',
+                            padding: '4px 8px',
+                            background: 'var(--background)',
+                            color: 'var(--foreground)',
+                            border: '2px solid #b91c1c',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontWeight: 'bold',
+                          }}
+                        >
+                          Delete
+                        </button>
+                      </div>
                     </td>
                     {columnVisibility.title && (
                       <td className="compact-px compact-py" style={{ padding: '4px 6px', maxWidth: '200px' }}>
@@ -710,6 +768,121 @@ export default function AdminDashboard() {
           </div>
         )}
       </main>
+
+      {grantPendingDelete && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-grant-dialog-title"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 20000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '16px',
+            background: 'rgba(0, 0, 0, 0.55)',
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) closeDeleteGrantDialog();
+          }}
+        >
+          <div
+            className="aol-box"
+            style={{
+              maxWidth: '420px',
+              width: '100%',
+              padding: '20px',
+              border: '2px solid #b91c1c',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2
+              id="delete-grant-dialog-title"
+              style={{
+                fontSize: '16px',
+                fontWeight: 'bold',
+                marginBottom: '12px',
+                color: 'var(--foreground)',
+              }}
+            >
+              Permanently delete this grant?
+            </h2>
+            <p style={{ fontSize: '13px', color: 'var(--foreground)', marginBottom: '10px', lineHeight: 1.5 }}>
+              This will remove the grant record from the database (including Supabase). Related tag links for this grant
+              are removed as well. This action cannot be undone and there is no way to recover the data afterward.
+            </p>
+            <p
+              style={{
+                fontSize: '12px',
+                fontWeight: 'bold',
+                marginBottom: '14px',
+                color: '#b91c1c',
+                lineHeight: 1.45,
+              }}
+            >
+              Grant: {grantPendingDelete.title}
+            </p>
+            <label
+              style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '10px',
+                fontSize: '12px',
+                color: 'var(--foreground)',
+                cursor: 'pointer',
+                marginBottom: '18px',
+                lineHeight: 1.45,
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={deletePermanentAcknowledged}
+                onChange={(e) => setDeletePermanentAcknowledged(e.target.checked)}
+                style={{ marginTop: '2px', flexShrink: 0 }}
+              />
+              <span>I understand this grant will be permanently deleted and cannot be restored.</span>
+            </label>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={closeDeleteGrantDialog}
+                disabled={deletingGrantId !== null}
+                className="aol-input"
+                style={{
+                  padding: '8px 14px',
+                  fontSize: '12px',
+                  fontWeight: 'bold',
+                  cursor: deletingGrantId ? 'not-allowed' : 'pointer',
+                  opacity: deletingGrantId ? 0.6 : 1,
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => void confirmDeleteGrant()}
+                disabled={!deletePermanentAcknowledged || deletingGrantId !== null}
+                style={{
+                  padding: '8px 14px',
+                  fontSize: '12px',
+                  fontWeight: 'bold',
+                  background: '#b91c1c',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor:
+                    !deletePermanentAcknowledged || deletingGrantId ? 'not-allowed' : 'pointer',
+                  opacity: !deletePermanentAcknowledged || deletingGrantId ? 0.55 : 1,
+                }}
+              >
+                {deletingGrantId ? 'Deleting…' : 'Delete permanently'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
