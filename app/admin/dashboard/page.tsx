@@ -4,7 +4,7 @@ import { useState, useRef, useCallback, useMemo, type DragEvent } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { format, isValid } from 'date-fns';
-import { AdminGrantSubmissionForm } from '@/components/AdminGrantSubmissionForm';
+import { AdminGrantSubmissionForm, type AdminGrantSubmission } from '@/components/AdminGrantSubmissionForm';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { AdminAddSourceForm } from '@/components/admin/AdminAddSourceForm';
 import { AdminSourcesTable } from '@/components/admin/AdminSourcesTable';
@@ -214,6 +214,9 @@ export default function AdminDashboard() {
   // Scraper State
   const [jobs, setJobs] = useState<ScrapeJob[]>([]);
   const [sources, setSources] = useState<GrantSource[]>([]);
+  const [submissions, setSubmissions] = useState<AdminGrantSubmission[]>([]);
+  const [submissionsRefreshing, setSubmissionsRefreshing] = useState(false);
+  const [dashboardSearch, setDashboardSearch] = useState('');
   const [scraping, setScraping] = useState(false);
   const [previewingGrantId, setPreviewingGrantId] = useState<string | null>(null);
   const [toasts, setToasts] = useState<AdminToastMessage[]>([]);
@@ -265,6 +268,29 @@ export default function AdminDashboard() {
     }
   }
 
+  async function fetchSubmissions() {
+    try {
+      const response = await fetch('/api/grants/submissions');
+      const data = await response.json();
+      if (response.ok) {
+        setSubmissions(data.submissions || []);
+      } else {
+        console.error('Error fetching submissions:', data.error);
+      }
+    } catch (error) {
+      console.error('Error fetching submissions:', error);
+    }
+  }
+
+  const refreshSubmissions = async () => {
+    setSubmissionsRefreshing(true);
+    try {
+      await fetchSubmissions();
+    } finally {
+      setSubmissionsRefreshing(false);
+    }
+  };
+
   const authCheckedRef = useRef(false);
   const prevStatusRef = useRef(status);
 
@@ -282,7 +308,8 @@ export default function AdminDashboard() {
       Promise.all([
         fetchPendingGrants(),
         fetchJobs(),
-        fetchSources()
+        fetchSources(),
+        fetchSubmissions(),
       ]).finally(() => setLoading(false));
     }
   }
@@ -309,6 +336,20 @@ export default function AdminDashboard() {
     const compareResult = aValue < bValue ? -1 : 1;
     return sortConfig.direction === 'asc' ? compareResult : -compareResult;
   });
+
+  const dashboardSearchNormalized = useMemo(
+    () => dashboardSearch.trim().toLowerCase(),
+    [dashboardSearch]
+  );
+
+  const filteredSources = useMemo(() => {
+    if (!dashboardSearchNormalized) return sources;
+    return sources.filter(
+      (s) =>
+        s.name.toLowerCase().includes(dashboardSearchNormalized) ||
+        s.url.toLowerCase().includes(dashboardSearchNormalized)
+    );
+  }, [sources, dashboardSearchNormalized]);
 
   // Scraper Handlers
   const handleScrapeSource = async (sourceId: string) => {
@@ -493,8 +534,28 @@ export default function AdminDashboard() {
           );
         })()}
 
+        <div className="aol-box" style={{ margin: '0 8px 16px 8px', padding: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span className="material-icons" style={{ fontSize: '16px', color: 'var(--foreground)', opacity: 0.6 }}>
+              search
+            </span>
+            <input
+              type="search"
+              value={dashboardSearch}
+              onChange={(e) => setDashboardSearch(e.target.value)}
+              placeholder="Search grant sources and user submissions..."
+              className="aol-input"
+              style={{ flex: 1 }}
+              aria-label="Search grant sources and submissions"
+            />
+          </div>
+          <p style={{ fontSize: '11px', color: 'var(--foreground)', marginTop: '10px', marginBottom: 0, opacity: 0.7 }}>
+            Filters the grant source table and user submission list. Grant inventory below is unchanged.
+          </p>
+        </div>
+
         <AdminSourcesTable
-          sources={sources}
+          sources={filteredSources}
           jobs={jobs}
           scraping={scraping}
           previewingGrantId={previewingGrantId}
@@ -503,25 +564,6 @@ export default function AdminDashboard() {
           onPreviewToggle={setPreviewingGrantId}
           onMessage={showToast}
         />
-
-        {/* Search Bar Placeholder */}
-        <div className="aol-box" style={{ margin: '0 8px 16px 8px', padding: '16px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span className="material-icons" style={{ fontSize: '16px', color: 'var(--foreground)', opacity: 0.6 }}>search</span>
-            <input 
-              type="text" 
-              placeholder="Search grants... (Coming Soon)" 
-              disabled
-              className="aol-input" 
-              style={{ flex: 1, opacity: 0.6, cursor: 'not-allowed' }} 
-            />
-          </div>
-        </div>
-
-        {/* User Submissions */}
-        <div style={{ margin: '0 8px 16px 8px' }}>
-          <AdminGrantSubmissionForm />
-        </div>
 
         {/* Grant Table Section */}
         {pendingGrants.length === 0 ? (
@@ -939,6 +981,15 @@ export default function AdminDashboard() {
             </div>
           </div>
         )}
+
+        <div style={{ margin: '0 8px 32px 8px' }}>
+          <AdminGrantSubmissionForm
+            submissions={submissions}
+            submissionsRefreshing={submissionsRefreshing}
+            onRefreshSubmissions={refreshSubmissions}
+            searchQuery={dashboardSearch}
+          />
+        </div>
       </main>
 
       {grantPendingDelete && (
