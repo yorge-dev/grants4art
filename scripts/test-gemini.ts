@@ -25,8 +25,9 @@ async function testGemini() {
   try {
     console.log("\nTesting Gemini API connection...");
     const ai = new GoogleGenAI({ apiKey });
+    const model = process.env.GEMINI_MODEL?.trim() || "gemini-2.5-flash";
     const response = await ai.models.generateContent({
-      model: "gemini-1.5-flash",
+      model,
       contents: "Say 'Hello, Gemini is working!' in one sentence.",
     });
 

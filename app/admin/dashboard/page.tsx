@@ -252,7 +252,10 @@ export default function AdminDashboard() {
         fetchSources();
         fetchPendingGrants();
       } else {
-        showToast(result.message || 'No grant information found', 'error');
+        showToast(
+          result.message || result.error || 'No grant information found',
+          'error'
+        );
         fetchJobs();
         fetchSources();
       }

@@ -54,9 +54,36 @@ export async function POST(request: NextRequest) {
         data: { status: ScrapeJobStatus.RUNNING }
       });
 
-      // Fetch the webpage
-      const response = await fetch(sourceUrl);
+      // Fetch the webpage (many sites block anonymous/bot requests without a browser-like UA)
+      const response = await fetch(sourceUrl, {
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+          Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+          "Accept-Language": "en-US,en;q=0.9",
+        },
+        redirect: "follow",
+      });
+
+      if (!response.ok) {
+        throw new Error(
+          `Failed to fetch URL (${response.status} ${response.statusText}). The site may block automated requests.`
+        );
+      }
+
+      const contentType = (response.headers.get("content-type") || "").toLowerCase();
+      if (contentType.includes("application/pdf") || contentType.startsWith("image/")) {
+        throw new Error(
+          "This URL is not an HTML page (e.g. PDF or image). Open the grant in your browser and paste the page URL."
+        );
+      }
+
       const htmlContent = await response.text();
+      if (htmlContent.length < 200) {
+        throw new Error(
+          "The fetched page is too small to be a useful grant listing (likely a block page or empty response)."
+        );
+      }
 
       // Extract grant information using Gemini
       const extractedData = await extractGrantInfo(htmlContent, sourceUrl);
@@ -72,7 +99,9 @@ export async function POST(request: NextRequest) {
             amountMax: extractedData.amountMax,
             deadline: extractedData.deadline ? new Date(extractedData.deadline) : null,
             location: extractedData.location,
-            eligibility: extractedData.eligibility,
+            eligibility:
+              extractedData.eligibility.trim() ||
+              "See the source page for full eligibility requirements.",
             description: extractedData.description,
             applicationUrl: extractedData.applicationUrl || sourceUrl,
             scrapeJobId: scrapeJob.id,
@@ -152,9 +181,11 @@ export async function POST(request: NextRequest) {
       throw error;
     }
   } catch (error) {
-    console.error('Error in scrape job:', error);
+    console.error("Error in scrape job:", error);
+    const message =
+      error instanceof Error ? error.message : "Failed to process scrape job";
     return NextResponse.json(
-      { error: 'Failed to process scrape job' },
+      { error: "Failed to process scrape job", message },
       { status: 500 }
     );
   }
