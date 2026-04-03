@@ -7,6 +7,59 @@ const apiKey = process.env.GEMINI_API_KEY || "";
 const GEMINI_TEXT_MODEL =
   process.env.GEMINI_MODEL?.trim() || "gemini-2.5-flash";
 
+/** After stripping head noise, many CMS pages still need 50k+ chars to reach the main article. */
+const SCRAPE_HTML_MAX_CHARS = Math.min(
+  Math.max(15000, Number(process.env.SCRAPE_HTML_MAX_CHARS) || 90000),
+  200000
+);
+
+function extractHeadSummary(html: string): string {
+  const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/im);
+  const title = titleMatch
+    ? titleMatch[1].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim()
+    : "";
+  const descMatch =
+    html.match(
+      /<meta[^>]+name=["']description["'][^>]*content=["']([^"']*)["']/i
+    ) ||
+    html.match(
+      /<meta[^>]+content=["']([^"']*)["'][^>]*name=["']description["']/i
+    );
+  const desc = descMatch?.[1]?.replace(/\s+/g, " ").trim() || "";
+  const parts: string[] = [];
+  if (title) parts.push(`title: ${title}`);
+  if (desc) parts.push(`meta description: ${desc}`);
+  return parts.join(" | ");
+}
+
+/**
+ * Large pages often put 20k+ characters in <head> (fonts, scripts, meta). The first 15k of raw
+ * HTML can omit <body> entirely. Prefer body markup and a higher cap so the model sees real copy.
+ */
+function prepareHtmlForGrantExtraction(html: string): string {
+  const headHint = extractHeadSummary(html);
+  let core = html;
+  const headEnd = core.search(/<\/head>/i);
+  if (headEnd !== -1) {
+    core = core.slice(headEnd + "</head>".length);
+  }
+  const bodyMatch = core.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+  if (bodyMatch) {
+    core = bodyMatch[1];
+  }
+
+  const stripped = core
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gim, "")
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gim, "")
+    .replace(/<noscript\b[^>]*>[\s\S]*?<\/noscript>/gim, "")
+    .replace(/<!--[\s\S]*?-->/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  const prefix = headHint ? `[Page hint] ${headHint}\n\n` : "";
+  return (prefix + stripped).slice(0, SCRAPE_HTML_MAX_CHARS);
+}
+
 if (!apiKey || apiKey === "your-gemini-api-key-here") {
   console.warn("GEMINI_API_KEY is not set or is still a placeholder. Gemini features will not work.");
   console.warn("   Please set GEMINI_API_KEY in your .env.local file");
@@ -59,17 +112,12 @@ export async function extractGrantInfo(htmlContent: string, sourceUrl: string): 
     throw new Error("GEMINI_API_KEY is not configured. Please set it in .env.local");
   }
 
-  // Basic cleanup of HTML content to reduce token count and noise
-  const cleanHtml = htmlContent
-    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gim, "")
-    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gim, "")
-    .replace(/<noscript\b[^>]*>[\s\S]*?<\/noscript>/gim, "")
-    .replace(/<!--[\s\S]*?-->/g, "")
-    .replace(/\s+/g, " ")
-    .substring(0, 15000);
+  const cleanHtml = prepareHtmlForGrantExtraction(htmlContent);
 
   const prompt = `
-You are a grant information extraction assistant. Analyze the following webpage content and extract grant information for artists and designers. This site focuses on opportunities relevant to Texas, but many grants are national or regional—still extract them if this page describes a real grant, fellowship, or arts funding opportunity.
+You are a funding-opportunity extraction assistant. Analyze the webpage content and extract structured information about grants, fellowships, prizes, pitch competitions, accelerator funds, sponsorships, or other non-dilutive funding (including entrepreneur or small-business programs like pitch contests with cash awards).
+
+Include opportunities for artists, designers, creatives, AND broader community or business programs when the page clearly describes how to apply for funding or a competition award. Do not return null solely because the program targets entrepreneurs instead of only visual artists.
 
 Extract the following information if available:
 - title: The name of the grant program
@@ -86,7 +134,7 @@ Extract the following information if available:
 
 Rules:
 - Return ONLY valid JSON: a single object with the fields above, or the JSON literal null (no markdown, no commentary).
-- If this page is not about a grant or funding opportunity, return null.
+- If this page is not about applying for funding, a competition award, or a similar opportunity, return null.
 
 Source URL: ${sourceUrl}
 
