@@ -2,7 +2,6 @@
 
 import { useState, useRef, useCallback } from 'react';
 import { formatTagName } from '@/lib/tag-utils';
-import { RunOnChange } from '@/components/RunOnMount';
 
 interface Tag {
   id: string;
@@ -33,7 +32,6 @@ export function HeroSearch({ onSearch }: HeroSearchProps) {
   const isTypingRef = useRef(isTyping);
   const inputValueRef = useRef(inputValue);
   const displayTextRef = useRef(displayText);
-  const pendingStartRef = useRef(false);
 
   const runAnimationStep = useCallback(() => {
     const step = () => {
@@ -189,81 +187,50 @@ export function HeroSearch({ onSearch }: HeroSearchProps) {
   }, [runAnimationStep]);
 
   const containerRefCallback = useCallback((node: HTMLDivElement | null) => {
-    if (node && !fetchTagsRef.current) {
-      fetchTagsRef.current = true;
-      fetch('/api/tags')
-        .then(response => response.json())
-        .then(data => {
-          if (data.tags && data.tags.length > 0) {
-            // Update tags ref immediately
-            tagsRef.current = data.tags;
-            setTags(data.tags);
-            
-            // Reset animation state when tags load
-            animationStartedRef.current = false;
-            pendingStartRef.current = false;
-            
-            // Clear any existing animation
-            if (animationRef.current) {
-              clearTimeout(animationRef.current);
-              animationRef.current = null;
-            }
-            
-            // Reset animation state
-            const prefix = 'I am a ';
-            currentTagIndexRef.current = 0;
-            currentCharIndexRef.current = 0;
-            isTypingRef.current = true;
-            displayTextRef.current = prefix;
-            setCurrentTagIndex(0);
-            setCurrentCharIndex(0);
-            setIsTyping(true);
-            setDisplayText(prefix);
-            
-            // Start animation when tags are loaded - use multiple timeouts to ensure state is ready
-            setTimeout(() => {
-              // Double-check all conditions
-              if (isAnimatingRef.current && 
-                  tagsRef.current.length > 0 && 
-                  inputValueRef.current === prefix &&
-                  !animationStartedRef.current) {
-                startAnimation();
-              }
-            }, 100);
-          }
-        })
-        .catch(error => {
-          console.error('Error fetching tags:', error);
-        });
+    if (!node) {
+      fetchTagsRef.current = false;
+      return;
     }
-  }, [startAnimation]);
+    if (fetchTagsRef.current) {
+      return;
+    }
+    fetchTagsRef.current = true;
 
-  const handleAnimationStateChange = useCallback(() => {
-    isAnimatingRef.current = isAnimating;
-    inputValueRef.current = inputValue;
+    fetch('/api/tags')
+      .then(response => response.json())
+      .then(data => {
+        if (data.tags && data.tags.length > 0) {
+          tagsRef.current = data.tags;
+          setTags(data.tags);
 
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        if (
-          isAnimating &&
-          tags.length > 0 &&
-          inputValue === 'I am a ' &&
-          !animationStartedRef.current &&
-          !animationRef.current
-        ) {
-          startAnimation();
-        }
-
-        if (!isAnimating && animationStartedRef.current) {
           animationStartedRef.current = false;
+
           if (animationRef.current) {
             clearTimeout(animationRef.current);
             animationRef.current = null;
           }
+
+          const prefix = 'I am a ';
+          currentTagIndexRef.current = 0;
+          currentCharIndexRef.current = 0;
+          isTypingRef.current = true;
+          isAnimatingRef.current = true;
+          inputValueRef.current = prefix;
+          displayTextRef.current = prefix;
+          setCurrentTagIndex(0);
+          setCurrentCharIndex(0);
+          setIsTyping(true);
+          setDisplayText(prefix);
+
+          setTimeout(() => {
+            startAnimation();
+          }, 100);
         }
+      })
+      .catch(error => {
+        console.error('Error fetching tags:', error);
       });
-    });
-  }, [isAnimating, tags.length, inputValue, startAnimation]);
+  }, [startAnimation]);
 
   // Handle input change
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -412,10 +379,6 @@ export function HeroSearch({ onSearch }: HeroSearchProps) {
         marginBottom: '32px',
         width: '100%'
       }}>
-      <RunOnChange
-        changeKey={`${isAnimating}-${tags.length}-${inputValue}`}
-        onRun={handleAnimationStateChange}
-      />
       <div style={{
         position: 'relative',
         width: '100%',

@@ -6,17 +6,24 @@ interface RunOnMountProps {
   onMount: () => void;
 }
 
-/** Runs a callback once when mounted, via ref callback (not during render). */
+/** Runs a callback once per mount cycle, via ref callback (not during render). */
 export function RunOnMount({ onMount }: RunOnMountProps) {
   const ranRef = useRef(false);
 
-  const refCallback = useCallback((node: HTMLSpanElement | null) => {
-    if (!node || ranRef.current) {
-      return;
-    }
-    ranRef.current = true;
-    onMount();
-  }, [onMount]);
+  const refCallback = useCallback(
+    (node: HTMLSpanElement | null) => {
+      if (!node) {
+        ranRef.current = false;
+        return;
+      }
+      if (ranRef.current) {
+        return;
+      }
+      ranRef.current = true;
+      onMount();
+    },
+    [onMount]
+  );
 
   return <span ref={refCallback} aria-hidden style={{ display: 'none' }} />;
 }

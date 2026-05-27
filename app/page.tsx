@@ -9,7 +9,6 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 import { GrantSubmissionForm } from '@/components/GrantSubmissionForm';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { HeroSearch } from '@/components/HeroSearch';
-import { RunOnMount } from '@/components/RunOnMount';
 import { ClickOutsideListener } from '@/components/ClickOutsideListener';
 import { useRealtimeGrants } from '@/lib/useRealtimeGrants';
 
@@ -53,6 +52,7 @@ export default function Home() {
   const filtersRef = useRef(filters);
   const paginationPageRef = useRef(pagination.page);
   const grantsContainerRef = useRef<HTMLDivElement>(null);
+  const initializedRef = useRef(false);
 
   const fetchGrants = useCallback(async (
     currentFilters = filtersRef.current,
@@ -111,6 +111,21 @@ export default function Home() {
     });
   }, [fetchGrants, refetchCurrent, subscribe]);
 
+  const rootRefCallback = useCallback(
+    (node: HTMLDivElement | null) => {
+      if (!node) {
+        initializedRef.current = false;
+        return;
+      }
+      if (initializedRef.current) {
+        return;
+      }
+      initializedRef.current = true;
+      handleMount();
+    },
+    [handleMount]
+  );
+
   const handleFilterChange = useCallback((newFilters: typeof filters) => {
     // Check if filters actually changed
     const prevFilters = prevFiltersRef.current;
@@ -139,8 +154,7 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="min-h-screen" style={{ background: 'var(--background)' }}>
-      <RunOnMount onMount={handleMount} />
+    <div ref={rootRefCallback} className="min-h-screen" style={{ background: 'var(--background)' }}>
       {lockedGrantId && (
         <ClickOutsideListener
           key={lockedGrantId}
