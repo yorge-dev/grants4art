@@ -9,6 +9,8 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 import { GrantSubmissionForm } from '@/components/GrantSubmissionForm';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { HeroSearch } from '@/components/HeroSearch';
+import { RunOnMount } from '@/components/RunOnMount';
+import { ClickOutsideListener } from '@/components/ClickOutsideListener';
 import { useRealtimeGrants } from '@/lib/useRealtimeGrants';
 
 interface Grant {
@@ -46,14 +48,9 @@ export default function Home() {
     totalAmount: 0
   });
   const [lockedGrantId, setLockedGrantId] = useState<string | null>(null);
-  const grantsContainerRef = useRef<HTMLDivElement>(null);
 
   const prevFiltersRef = useRef(filters);
-  const mountedRef = useRef(false);
-  const filtersRef = useRef(filters);
-  const paginationRef = useRef(pagination);
-  filtersRef.current = filters;
-  paginationRef.current = pagination;
+  const grantsContainerRef = useRef<HTMLDivElement>(null);
 
   const fetchGrants = useCallback(async (currentFilters = filters, currentPage = pagination.page) => {
     setLoading(true);
@@ -92,26 +89,22 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [filters, pagination.page]);
 
   const refetchCurrent = useCallback(() => {
-    fetchGrants(filtersRef.current, paginationRef.current.page);
-  }, [fetchGrants]);
+    fetchGrants(filters, pagination.page);
+  }, [fetchGrants, filters, pagination.page]);
 
-  const { subscribe, unsubscribe } = useRealtimeGrants({
+  const { subscribe } = useRealtimeGrants({
     onInsert: refetchCurrent,
     onUpdate: refetchCurrent,
     onDelete: refetchCurrent,
   });
 
-  // Fetch on initial mount and start realtime subscription
-  if (!mountedRef.current) {
-    mountedRef.current = true;
-    setTimeout(() => {
-      fetchGrants(filters, pagination.page);
-      subscribe();
-    }, 0);
-  }
+  const handleMount = useCallback(() => {
+    fetchGrants(filters, pagination.page);
+    subscribe();
+  }, [fetchGrants, filters, pagination.page, subscribe]);
 
   const handleFilterChange = useCallback((newFilters: typeof filters) => {
     // Check if filters actually changed
@@ -144,33 +137,16 @@ export default function Home() {
     setLockedGrantId(null);
   }, []);
 
-  // Handle click outside to unlock
-  const clickOutsideHandlerRef = useRef<((event: MouseEvent) => void) | null>(null);
-  const lockedGrantIdRef = useRef<string | null>(lockedGrantId);
-  
-  // Update ref when lockedGrantId changes
-  lockedGrantIdRef.current = lockedGrantId;
-  
-  // Setup click outside handler when lockedGrantId changes
-  if (lockedGrantId && !clickOutsideHandlerRef.current) {
-    clickOutsideHandlerRef.current = (event: MouseEvent) => {
-      // Read from ref to get current value, not closure
-      if (lockedGrantIdRef.current && grantsContainerRef.current) {
-        const target = event.target as Node;
-        if (!grantsContainerRef.current.contains(target)) {
-          setLockedGrantId(null);
-        }
-      }
-    };
-    document.addEventListener('mousedown', clickOutsideHandlerRef.current);
-  } else if (!lockedGrantId && clickOutsideHandlerRef.current) {
-    document.removeEventListener('mousedown', clickOutsideHandlerRef.current);
-    clickOutsideHandlerRef.current = null;
-  }
-
-
   return (
     <div className="min-h-screen" style={{ background: 'var(--background)' }}>
+      <RunOnMount onMount={handleMount} />
+      {lockedGrantId && (
+        <ClickOutsideListener
+          key={lockedGrantId}
+          containerRef={grantsContainerRef}
+          onOutsideClick={handleUnlockGrant}
+        />
+      )}
       {/* Header */}
       <div className="mx-auto" style={{ maxWidth: '1440px', padding: '0 16px', marginBottom: '24px' }}>
         <div style={{ margin: '16px 8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

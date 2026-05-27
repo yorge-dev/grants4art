@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useCallback, type ReactNode } from 'react';
 import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { AuthStatusHandler } from '@/components/admin/AuthStatusHandler';
 
 interface Grant {
   id: string;
@@ -19,28 +19,10 @@ interface Grant {
 
 export default function AdminGrantsPage() {
   const { status } = useSession();
-  const router = useRouter();
   const [grants, setGrants] = useState<Grant[]>([]);
   const [loading, setLoading] = useState(true);
-  const authCheckedRef = useRef(false);
-  const prevStatusRef = useRef(status);
 
-  // Handle auth status changes
-  if (status !== prevStatusRef.current) {
-    prevStatusRef.current = status;
-    authCheckedRef.current = false;
-  }
-
-  if (!authCheckedRef.current) {
-    authCheckedRef.current = true;
-    if (status === 'unauthenticated') {
-      setTimeout(() => router.push('/admin/login'), 0);
-    } else if (status === 'authenticated') {
-      setTimeout(() => fetchGrants(), 0);
-    }
-  }
-
-  const fetchGrants = async () => {
+  const fetchGrants = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams({
@@ -54,7 +36,7 @@ export default function AdminGrantsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   const handleDelete = async (grantId: string) => {
     if (!confirm('Are you sure you want to delete this grant?')) {
@@ -74,24 +56,23 @@ export default function AdminGrantsPage() {
     }
   };
 
+  let content: ReactNode;
+
   if (status === 'loading' || loading) {
-    return (
+    content = (
       <div className="min-h-screen" style={{ background: 'var(--background)' }}>
         <div className="flex items-center justify-center" style={{ minHeight: '200px' }}>
-            <div className="text-center aol-box-inset" style={{ padding: '16px' }}>
+          <div className="text-center aol-box-inset" style={{ padding: '16px' }}>
             <LoadingSpinner size={28} />
             <p className="compact-mt" style={{ fontSize: '13px', color: 'var(--foreground)', fontWeight: 'bold' }}>Loading...</p>
           </div>
         </div>
       </div>
     );
-  }
-
-  if (status === 'unauthenticated') {
-    return null;
-  }
-
-  return (
+  } else if (status === 'unauthenticated') {
+    content = null;
+  } else {
+    content = (
     <div className="min-h-screen" style={{ background: 'var(--background)' }}>
       
       <main className="mx-auto" style={{ maxWidth: '1440px', padding: '0 16px', marginTop: '8px' }}>
@@ -170,6 +151,16 @@ export default function AdminGrantsPage() {
         </div>
       </main>
     </div>
+    );
+  }
+
+  return (
+    <>
+      {status !== 'loading' && (
+        <AuthStatusHandler key={status} status={status} onAuthenticated={fetchGrants} />
+      )}
+      {content}
+    </>
   );
 }
 

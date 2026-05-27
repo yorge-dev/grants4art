@@ -10,6 +10,7 @@ import { AdminAddSourceForm } from '@/components/admin/AdminAddSourceForm';
 import { AdminSourcesTable } from '@/components/admin/AdminSourcesTable';
 import { AdminGrantPreviewCard } from '@/components/admin/AdminGrantPreviewCard';
 import { AdminToast, type AdminToastMessage } from '@/components/admin/AdminToast';
+import { AuthStatusHandler } from '@/components/admin/AuthStatusHandler';
 import {
   DraggableTableTh,
   getAdminTableColumnDragData,
@@ -99,7 +100,7 @@ const formatSafeDate = (dateValue: Date | string | null | undefined, formatStrin
 };
 
 export default function AdminDashboard() {
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const router = useRouter();
   
   // Grant State
@@ -351,28 +352,14 @@ export default function AdminDashboard() {
     }
   };
 
-  const authCheckedRef = useRef(false);
-  const prevStatusRef = useRef(status);
-
-  // Handle auth status changes
-  if (status !== prevStatusRef.current) {
-    prevStatusRef.current = status;
-    authCheckedRef.current = false;
-  }
-
-  if (!authCheckedRef.current) {
-    authCheckedRef.current = true;
-    if (status === 'unauthenticated') {
-      setTimeout(() => router.push('/admin/login'), 0);
-    } else if (status === 'authenticated') {
-      Promise.all([
-        fetchPendingGrants(),
-        fetchJobs(),
-        fetchSources(),
-        fetchSubmissions(),
-      ]).finally(() => setLoading(false));
-    }
-  }
+  const handleAuthenticated = useCallback(() => {
+    Promise.all([
+      fetchPendingGrants(),
+      fetchJobs(),
+      fetchSources(),
+      fetchSubmissions(),
+    ]).finally(() => setLoading(false));
+  }, []);
 
   // Grant Sorting
   const handleSort = (key: keyof Grant) => {
@@ -538,8 +525,12 @@ export default function AdminDashboard() {
     </div>
   );
 
-  if (status === 'loading' || loading) {
-    return (
+  return (
+    <>
+      {status !== 'loading' && (
+        <AuthStatusHandler key={status} status={status} onAuthenticated={handleAuthenticated} />
+      )}
+      {status === 'loading' || loading ? (
       <div className="min-h-screen" style={{ background: 'var(--background)' }}>
         <div className="flex items-center justify-center" style={{ minHeight: '200px' }}>
           <div className="text-center aol-box-inset" style={{ padding: '16px' }}>
@@ -548,14 +539,7 @@ export default function AdminDashboard() {
           </div>
         </div>
       </div>
-    );
-  }
-
-  if (status === 'unauthenticated') {
-    return null;
-  }
-
-  return (
+      ) : status === 'unauthenticated' ? null : (
     <div className="min-h-screen" style={{ background: 'var(--background)' }}>
       <AdminToast toasts={toasts} onDismiss={dismissToast} />
 
@@ -1204,5 +1188,7 @@ export default function AdminDashboard() {
         </div>
       )}
     </div>
+      )}
+    </>
   );
 }

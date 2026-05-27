@@ -25,12 +25,12 @@
     "bcryptjs": "^3.0.3",
     "date-fns": "^4.1.0",
     "dotenv": "^17.2.3",
-    "next": "16.0.10",
+    "next": "16.2.6",
     "next-auth": "^4.24.13",
     "pg": "^8.16.3",
     "prisma": "^7.1.0",
-    "react": "19.2.3",
-    "react-dom": "19.2.3"
+    "react": "19.2.6",
+    "react-dom": "19.2.6"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -41,8 +41,8 @@
     "@types/react-dom": "^19",
     "concurrently": "^9.2.1",
     "eslint": "^9",
-    "eslint-config-next": "16.0.10",
-    "open-cli": "^8.0.0",
+    "eslint-config-next": "16.2.6",
+    "open-cli": "^9.0.0",
     "tailwindcss": "^4",
     "tsx": "^4.20.6",
     "typescript": "^5",
