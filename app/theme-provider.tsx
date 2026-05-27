@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
 
 type Theme = 'light' | 'grey' | 'grey-inverted' | 'dark';
 
@@ -16,9 +16,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<Theme>('light');
   const [mounted, setMounted] = useState(false);
 
-  useEffect(() => {
-    setMounted(true);
-    // Check localStorage for saved theme preference
+  const initRefCallback = useCallback((node: HTMLDivElement | null) => {
+    if (!node) {
+      return;
+    }
+
     const savedTheme = localStorage.getItem('theme') as Theme | null;
     if (savedTheme) {
       setTheme(savedTheme);
@@ -26,6 +28,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     } else {
       document.documentElement.setAttribute('data-theme', 'light');
     }
+    setMounted(true);
   }, []);
 
   useEffect(() => {
@@ -59,9 +62,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     setTheme(newTheme);
   };
 
-  // Always provide the context, even before mounting
   return (
     <ThemeContext.Provider value={{ theme, toggleTheme, setTheme: setThemeDirectly }}>
+      <div ref={initRefCallback} aria-hidden style={{ display: 'none' }} />
       {children}
     </ThemeContext.Provider>
   );

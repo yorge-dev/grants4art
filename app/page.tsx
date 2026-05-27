@@ -9,6 +9,7 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 import { GrantSubmissionForm } from '@/components/GrantSubmissionForm';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { HeroSearch } from '@/components/HeroSearch';
+import { ClickOutsideListener } from '@/components/ClickOutsideListener';
 import { useRealtimeGrants } from '@/lib/useRealtimeGrants';
 
 interface Grant {
@@ -46,16 +47,17 @@ export default function Home() {
     totalAmount: 0
   });
   const [lockedGrantId, setLockedGrantId] = useState<string | null>(null);
-  const grantsContainerRef = useRef<HTMLDivElement>(null);
 
   const prevFiltersRef = useRef(filters);
-  const mountedRef = useRef(false);
   const filtersRef = useRef(filters);
-  const paginationRef = useRef(pagination);
-  filtersRef.current = filters;
-  paginationRef.current = pagination;
+  const paginationPageRef = useRef(pagination.page);
+  const grantsContainerRef = useRef<HTMLDivElement>(null);
+  const initializedRef = useRef(false);
 
-  const fetchGrants = useCallback(async (currentFilters = filters, currentPage = pagination.page) => {
+  const fetchGrants = useCallback(async (
+    currentFilters = filtersRef.current,
+    currentPage = paginationPageRef.current
+  ) => {
     setLoading(true);
     try {
       const params = new URLSearchParams({
@@ -95,23 +97,34 @@ export default function Home() {
   }, []);
 
   const refetchCurrent = useCallback(() => {
-    fetchGrants(filtersRef.current, paginationRef.current.page);
+    fetchGrants();
   }, [fetchGrants]);
 
-  const { subscribe, unsubscribe } = useRealtimeGrants({
-    onInsert: refetchCurrent,
-    onUpdate: refetchCurrent,
-    onDelete: refetchCurrent,
-  });
+  const { subscribe } = useRealtimeGrants();
 
-  // Fetch on initial mount and start realtime subscription
-  if (!mountedRef.current) {
-    mountedRef.current = true;
-    setTimeout(() => {
-      fetchGrants(filters, pagination.page);
-      subscribe();
-    }, 0);
-  }
+  const handleMount = useCallback(() => {
+    fetchGrants();
+    subscribe({
+      onInsert: refetchCurrent,
+      onUpdate: refetchCurrent,
+      onDelete: refetchCurrent,
+    });
+  }, [fetchGrants, refetchCurrent, subscribe]);
+
+  const rootRefCallback = useCallback(
+    (node: HTMLDivElement | null) => {
+      if (!node) {
+        initializedRef.current = false;
+        return;
+      }
+      if (initializedRef.current) {
+        return;
+      }
+      initializedRef.current = true;
+      handleMount();
+    },
+    [handleMount]
+  );
 
   const handleFilterChange = useCallback((newFilters: typeof filters) => {
     // Check if filters actually changed
@@ -120,18 +133,14 @@ export default function Home() {
       prevFilters.search !== newFilters.search ||
       JSON.stringify([...prevFilters.categories].sort()) !== JSON.stringify([...newFilters.categories].sort());
     
-    // Update the ref
     prevFiltersRef.current = newFilters;
-    
-    // Update filters
+    filtersRef.current = newFilters;
     setFilters(newFilters);
     
-    // Only reset pagination if filters actually changed
     if (filtersChanged) {
+      paginationPageRef.current = 1;
       setPagination(prev => ({ ...prev, page: 1 }));
-      // Unlock any locked card when filters change
       setLockedGrantId(null);
-      // Fetch with new filters and page 1
       fetchGrants(newFilters, 1);
     }
   }, [fetchGrants]);
@@ -144,33 +153,15 @@ export default function Home() {
     setLockedGrantId(null);
   }, []);
 
-  // Handle click outside to unlock
-  const clickOutsideHandlerRef = useRef<((event: MouseEvent) => void) | null>(null);
-  const lockedGrantIdRef = useRef<string | null>(lockedGrantId);
-  
-  // Update ref when lockedGrantId changes
-  lockedGrantIdRef.current = lockedGrantId;
-  
-  // Setup click outside handler when lockedGrantId changes
-  if (lockedGrantId && !clickOutsideHandlerRef.current) {
-    clickOutsideHandlerRef.current = (event: MouseEvent) => {
-      // Read from ref to get current value, not closure
-      if (lockedGrantIdRef.current && grantsContainerRef.current) {
-        const target = event.target as Node;
-        if (!grantsContainerRef.current.contains(target)) {
-          setLockedGrantId(null);
-        }
-      }
-    };
-    document.addEventListener('mousedown', clickOutsideHandlerRef.current);
-  } else if (!lockedGrantId && clickOutsideHandlerRef.current) {
-    document.removeEventListener('mousedown', clickOutsideHandlerRef.current);
-    clickOutsideHandlerRef.current = null;
-  }
-
-
   return (
-    <div className="min-h-screen" style={{ background: 'var(--background)' }}>
+    <div ref={rootRefCallback} className="min-h-screen" style={{ background: 'var(--background)' }}>
+      {lockedGrantId && (
+        <ClickOutsideListener
+          key={lockedGrantId}
+          containerRef={grantsContainerRef}
+          onOutsideClick={handleUnlockGrant}
+        />
+      )}
       {/* Header */}
       <div className="mx-auto" style={{ maxWidth: '1440px', padding: '0 16px', marginBottom: '24px' }}>
         <div style={{ margin: '16px 8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -266,8 +257,9 @@ export default function Home() {
                 <button
                   onClick={() => {
                     const newPage = Math.max(1, pagination.page - 1);
+                    paginationPageRef.current = newPage;
                     setPagination(prev => ({ ...prev, page: newPage }));
-                    fetchGrants(filters, newPage);
+                    fetchGrants(filtersRef.current, newPage);
                   }}
                   disabled={pagination.page === 1}
                   className="aol-button"
@@ -281,8 +273,9 @@ export default function Home() {
                 <button
                   onClick={() => {
                     const newPage = Math.min(pagination.pages, pagination.page + 1);
+                    paginationPageRef.current = newPage;
                     setPagination(prev => ({ ...prev, page: newPage }));
-                    fetchGrants(filters, newPage);
+                    fetchGrants(filtersRef.current, newPage);
                   }}
                   disabled={pagination.page === pagination.pages}
                   className="aol-button"
@@ -303,7 +296,7 @@ export default function Home() {
             © 2026 Grants4. All rights reserved.
           </p>
           <p className="text-center" style={{ fontSize: '12px', color: 'var(--foreground)', marginTop: '8px' }}>
-            Created by <Link href="https://www.yorge.net" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary)', textDecoration: 'none' }}>Yorge</Link> (<Link href="https://x.com/yor9e_" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary)', textDecoration: 'none' }}>@yor9e_</Link>)
+            Created by <Link href="https://www.yorge.net" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary)', textDecoration: 'none' }}>Yorge</Link>
           </p>
         </footer>
       </div>
