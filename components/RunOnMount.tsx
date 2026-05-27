@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 
 interface RunOnMountProps {
   onMount: () => void;
@@ -8,14 +8,15 @@ interface RunOnMountProps {
 
 /** Runs a callback once when mounted, via ref callback (not during render). */
 export function RunOnMount({ onMount }: RunOnMountProps) {
-  const refCallback = useCallback(
-    (node: HTMLSpanElement | null) => {
-      if (node) {
-        onMount();
-      }
-    },
-    [onMount]
-  );
+  const ranRef = useRef(false);
+
+  const refCallback = useCallback((node: HTMLSpanElement | null) => {
+    if (!node || ranRef.current) {
+      return;
+    }
+    ranRef.current = true;
+    onMount();
+  }, [onMount]);
 
   return <span ref={refCallback} aria-hidden style={{ display: 'none' }} />;
 }

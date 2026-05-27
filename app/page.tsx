@@ -50,9 +50,14 @@ export default function Home() {
   const [lockedGrantId, setLockedGrantId] = useState<string | null>(null);
 
   const prevFiltersRef = useRef(filters);
+  const filtersRef = useRef(filters);
+  const paginationPageRef = useRef(pagination.page);
   const grantsContainerRef = useRef<HTMLDivElement>(null);
 
-  const fetchGrants = useCallback(async (currentFilters = filters, currentPage = pagination.page) => {
+  const fetchGrants = useCallback(async (
+    currentFilters = filtersRef.current,
+    currentPage = paginationPageRef.current
+  ) => {
     setLoading(true);
     try {
       const params = new URLSearchParams({
@@ -89,22 +94,22 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
-  }, [filters, pagination.page]);
+  }, []);
 
   const refetchCurrent = useCallback(() => {
-    fetchGrants(filters, pagination.page);
-  }, [fetchGrants, filters, pagination.page]);
+    fetchGrants();
+  }, [fetchGrants]);
 
-  const { subscribe } = useRealtimeGrants({
-    onInsert: refetchCurrent,
-    onUpdate: refetchCurrent,
-    onDelete: refetchCurrent,
-  });
+  const { subscribe } = useRealtimeGrants();
 
   const handleMount = useCallback(() => {
-    fetchGrants(filters, pagination.page);
-    subscribe();
-  }, [fetchGrants, filters, pagination.page, subscribe]);
+    fetchGrants();
+    subscribe({
+      onInsert: refetchCurrent,
+      onUpdate: refetchCurrent,
+      onDelete: refetchCurrent,
+    });
+  }, [fetchGrants, refetchCurrent, subscribe]);
 
   const handleFilterChange = useCallback((newFilters: typeof filters) => {
     // Check if filters actually changed
@@ -113,18 +118,14 @@ export default function Home() {
       prevFilters.search !== newFilters.search ||
       JSON.stringify([...prevFilters.categories].sort()) !== JSON.stringify([...newFilters.categories].sort());
     
-    // Update the ref
     prevFiltersRef.current = newFilters;
-    
-    // Update filters
+    filtersRef.current = newFilters;
     setFilters(newFilters);
     
-    // Only reset pagination if filters actually changed
     if (filtersChanged) {
+      paginationPageRef.current = 1;
       setPagination(prev => ({ ...prev, page: 1 }));
-      // Unlock any locked card when filters change
       setLockedGrantId(null);
-      // Fetch with new filters and page 1
       fetchGrants(newFilters, 1);
     }
   }, [fetchGrants]);
@@ -242,8 +243,9 @@ export default function Home() {
                 <button
                   onClick={() => {
                     const newPage = Math.max(1, pagination.page - 1);
+                    paginationPageRef.current = newPage;
                     setPagination(prev => ({ ...prev, page: newPage }));
-                    fetchGrants(filters, newPage);
+                    fetchGrants(filtersRef.current, newPage);
                   }}
                   disabled={pagination.page === 1}
                   className="aol-button"
@@ -257,8 +259,9 @@ export default function Home() {
                 <button
                   onClick={() => {
                     const newPage = Math.min(pagination.pages, pagination.page + 1);
+                    paginationPageRef.current = newPage;
                     setPagination(prev => ({ ...prev, page: newPage }));
-                    fetchGrants(filters, newPage);
+                    fetchGrants(filtersRef.current, newPage);
                   }}
                   disabled={pagination.page === pagination.pages}
                   className="aol-button"
@@ -279,7 +282,7 @@ export default function Home() {
             © 2026 Grants4. All rights reserved.
           </p>
           <p className="text-center" style={{ fontSize: '12px', color: 'var(--foreground)', marginTop: '8px' }}>
-            Created by <Link href="https://www.yorge.net" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary)', textDecoration: 'none' }}>Yorge</Link> (<Link href="https://x.com/yor9e_" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary)', textDecoration: 'none' }}>@yor9e_</Link>)
+            Created by <Link href="https://www.yorge.net" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary)', textDecoration: 'none' }}>Yorge</Link>
           </p>
         </footer>
       </div>
