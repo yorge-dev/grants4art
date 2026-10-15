@@ -21,9 +21,10 @@ interface Grant {
 interface GrantStatsProps {
   totalGrants: number;
   totalAmount: number;
+  filtered: boolean;
 }
 
-export function GrantStats({ totalGrants, totalAmount }: GrantStatsProps) {
+export function GrantStats({ totalGrants, totalAmount, filtered }: GrantStatsProps) {
 
   // Format the total amount with appropriate rounding
   const formatAmount = (amount: number) => {
@@ -44,7 +45,7 @@ export function GrantStats({ totalGrants, totalAmount }: GrantStatsProps) {
             {totalGrants}
           </div>
           <div style={{ fontSize: '12px', color: 'var(--foreground)', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-            Total Grants
+            {filtered ? 'Matching Grants' : 'Total Grants'}
           </div>
         </div>
         <div style={{ padding: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
@@ -52,7 +53,7 @@ export function GrantStats({ totalGrants, totalAmount }: GrantStatsProps) {
             {formatAmount(totalAmount)}
           </div>
           <div style={{ fontSize: '12px', color: 'var(--foreground)', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-            Total Funding Amount
+            {filtered ? 'Matching Funding' : 'Total Funding'}
           </div>
         </div>
       </div>

@@ -167,6 +167,38 @@
   --amount-card-bg-end: #1f1f1f;
 }
 
+[data-theme='arctic'] {
+  /* #e7ecef, #274c77, #6096ba, #a3cef1, #8b8c89 */
+  --background: #e7ecef;
+  --foreground: #274c77;
+  --border-color: #8b8c89;
+  --primary: #274c77;
+  --secondary: #6096ba;
+  --accent: #6096ba;
+  --muted: #8b8c89;
+  --card-bg: #e7ecef;
+  --inset-bg: #a3cef1;
+  --text-field-bg: #a3cef1;
+  --amount-card-bg-start: #a3cef1;
+  --amount-card-bg-end: #e7ecef;
+}
+
+[data-theme='prairie'] {
+  /* #605b56, #837a75, #acc18a, #dafeb7, #f2fbe0 */
+  --background: #f2fbe0;
+  --foreground: #605b56;
+  --border-color: #837a75;
+  --primary: #605b56;
+  --secondary: #837a75;
+  --accent: #acc18a;
+  --muted: #837a75;
+  --card-bg: #f2fbe0;
+  --inset-bg: #dafeb7;
+  --text-field-bg: #dafeb7;
+  --amount-card-bg-start: #dafeb7;
+  --amount-card-bg-end: #acc18a;
+}
+
 [data-theme='dark'] {
   /* Dark mode colors */
   --background: var(--color-charcoal-brown-100);
@@ -219,6 +251,15 @@ body {
 
 a, button, input[type="button"], input[type="submit"], .aol-button, .aol-button-secondary {
   cursor: url('/cursor-light.svg') 3 3, pointer !important;
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
 }
 
 input[type="text"], input[type="search"], textarea, select {
@@ -366,6 +407,26 @@ body > * {
   color: white;
 }
 
+[data-theme='arctic'] ::selection {
+  background-color: #274c77;
+  color: #e7ecef;
+}
+
+[data-theme='arctic'] ::-moz-selection {
+  background-color: #274c77;
+  color: #e7ecef;
+}
+
+[data-theme='prairie'] ::selection {
+  background-color: #605b56;
+  color: #f2fbe0;
+}
+
+[data-theme='prairie'] ::-moz-selection {
+  background-color: #605b56;
+  color: #f2fbe0;
+}
+
 [data-theme='grey-inverted'] ::-moz-selection {
   background-color: #666666;
   color: white;
@@ -400,6 +461,12 @@ body > * {
   color: white;
 }
 
+[data-theme='arctic'] .aol-button {
+  background: linear-gradient(to bottom, #274c77, #6096ba);
+  border: 3px outset #274c77;
+  color: #e7ecef;
+}
+
 .aol-button:hover {
   background: linear-gradient(to bottom, var(--color-saddle-brown-500), var(--color-saddle-brown-600));
 }
@@ -410,6 +477,22 @@ body > * {
 
 [data-theme='grey-inverted'] .aol-button:hover {
   background: linear-gradient(to bottom, #888888, #666666);
+}
+
+[data-theme='arctic'] .aol-button:hover {
+  background: linear-gradient(to bottom, #6096ba, #274c77);
+}
+
+[data-theme='prairie'] .aol-button {
+  background: linear-gradient(to bottom, #605b56, #837a75);
+  border: 3px outset #605b56;
+  color: #f2fbe0;
+}
+
+[data-theme='prairie'] .aol-button:hover,
+[data-theme='prairie'] .aol-button:active {
+  background: linear-gradient(to bottom, #837a75, #605b56);
+  color: #f2fbe0;
 }
 
 .aol-button:active {
@@ -445,6 +528,12 @@ body > * {
   border: 3px outset var(--secondary);
 }
 
+[data-theme='arctic'] .aol-button-secondary {
+  background: linear-gradient(to bottom, #a3cef1, #6096ba);
+  border: 3px outset #6096ba;
+  color: #274c77;
+}
+
 .aol-button-secondary:hover {
   background: linear-gradient(to bottom, var(--color-toffee-brown-500), var(--color-toffee-brown-600));
 }
@@ -455,6 +544,24 @@ body > * {
 
 [data-theme='grey-inverted'] .aol-button-secondary:hover {
   background: linear-gradient(to bottom, #777777, #666666);
+}
+
+[data-theme='arctic'] .aol-button-secondary:hover,
+[data-theme='arctic'] .aol-button-secondary:active {
+  background: linear-gradient(to bottom, #e7ecef, #a3cef1);
+  color: #274c77;
+}
+
+[data-theme='prairie'] .aol-button-secondary {
+  background: linear-gradient(to bottom, #dafeb7, #acc18a);
+  border: 3px outset #acc18a;
+  color: #605b56;
+}
+
+[data-theme='prairie'] .aol-button-secondary:hover,
+[data-theme='prairie'] .aol-button-secondary:active {
+  background: linear-gradient(to bottom, #f2fbe0, #dafeb7);
+  color: #605b56;
 }
 
 .aol-button-secondary:active {

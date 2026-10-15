@@ -1,23 +1,39 @@
 'use client';
 
-import { useTheme } from '@/app/theme-provider';
+import { useTheme, type Theme } from '@/app/theme-provider';
 import { useState, useRef } from 'react';
 
 const THEMES = [
   { slug: 'grey', name: 'Grey', icon: 'invert_colors' },
-  { slug: 'dark', name: 'Forest', icon: null },
+  { slug: 'dark', name: 'Taiga', icon: null },
   { slug: 'light', name: 'Desert', icon: null },
+  { slug: 'arctic', name: 'Arctic', icon: null },
+  { slug: 'prairie', name: 'Prairie', icon: null },
 ] as const;
 
-const getThemeColor = (slug: string, currentTheme: string): string => {
-  // In grey themes, use white (no colors)
+type ThemeOption = (typeof THEMES)[number]['slug'];
+
+const getThemeColor = (slug: ThemeOption, currentTheme: Theme): string => {
   if (currentTheme === 'grey' || currentTheme === 'grey-inverted') {
     return '#ffffff';
   }
-  
-  if (slug === 'dark') return 'var(--color-charcoal-brown-500)';
-  if (slug === 'grey') return '#888888';
-  return 'var(--color-khaki-beige-800)'; // light
+
+  switch (slug) {
+    case 'dark':
+      return 'var(--color-charcoal-brown-500)';
+    case 'grey':
+      return '#888888';
+    case 'light':
+      return 'var(--color-khaki-beige-800)';
+    case 'arctic':
+      return '#6096ba';
+    case 'prairie':
+      return '#acc18a';
+    default: {
+      const unreachable: never = slug;
+      return unreachable;
+    }
+  }
 };
 
 export function ThemeToggle() {
@@ -46,7 +62,7 @@ export function ThemeToggle() {
     }, 150);
   };
 
-  const handleThemeSelect = (themeSlug: 'dark' | 'grey' | 'light') => {
+  const handleThemeSelect = (themeSlug: ThemeOption) => {
     if (setTheme) {
       // If selecting grey and currently on grey-inverted, switch to grey
       // Otherwise, set the theme normally

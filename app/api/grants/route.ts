@@ -15,26 +15,45 @@ export async function GET(request: NextRequest) {
     const skip = (page - 1) * limit;
 
     const where: any = {};
+    const and: any[] = [];
+    const status = searchParams.get('status');
 
     // Search filter - includes tag search
     if (search) {
-      where.OR = [
-        { title: { contains: search, mode: 'insensitive' } },
-        { organization: { contains: search, mode: 'insensitive' } },
-        { description: { contains: search, mode: 'insensitive' } },
-        {
-          tags: {
-            some: {
-              tag: {
-                OR: [
-                  { name: { contains: search, mode: 'insensitive' } },
-                  { slug: { contains: search, mode: 'insensitive' } }
-                ]
+      and.push({
+        OR: [
+          { title: { contains: search, mode: 'insensitive' } },
+          { organization: { contains: search, mode: 'insensitive' } },
+          { description: { contains: search, mode: 'insensitive' } },
+          {
+            tags: {
+              some: {
+                tag: {
+                  OR: [
+                    { name: { contains: search, mode: 'insensitive' } },
+                    { slug: { contains: search, mode: 'insensitive' } }
+                  ]
+                }
               }
             }
           }
-        }
-      ];
+        ]
+      });
+    }
+
+    if (status === 'open') {
+      and.push({
+        OR: [
+          { deadline: null },
+          { deadline: { gte: new Date() } }
+        ]
+      });
+    } else if (status === 'closed') {
+      and.push({ deadline: { lt: new Date() } });
+    }
+
+    if (and.length > 0) {
+      where.AND = and;
     }
 
     // Location filter

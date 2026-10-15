@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono, Exo } from "next/font/google";
 import "./globals.css";
+import { SaveToast } from "@/components/SaveToast";
 import { Providers } from "./providers";
 
 const inter = Inter({
@@ -45,7 +46,10 @@ export default function RootLayout({
       <body
         className={`${inter.variable} ${jetbrainsMono.variable} ${exo.variable}`}
       >
-        <Providers>{children}</Providers>
+        <Providers>
+          {children}
+          <SaveToast />
+        </Providers>
       </body>
     </html>
   );
